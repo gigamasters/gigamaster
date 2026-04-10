@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>나만의 자동차 만들기 🚗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .feature-icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-purple-50 min-h-screen">
+    <div id="app" class="p-4 pb-24">
+        <div class="max-w-md mx-auto">
+            <h1 class="text-3xl font-bold text-center mb-6 text-purple-600 mt-4">
+                🚗 나만의 자동차 만들기
+            </h1>
+
+            <!-- Budget Bar -->
+            <div class="bg-white rounded-2xl shadow-lg p-5 mb-6">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-lg font-semibold text-gray-700">남은 예산</span>
+                    <span id="budget-display" class="text-2xl font-bold text-purple-600">600원</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div id="budget-bar" class="h-full rounded-full transition-all duration-300 bg-green-500" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <!-- Car Preview -->
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <h3 class="text-xl font-bold mb-4 text-center text-gray-700">미리보기</h3>
+                <div id="car-preview" class="text-8xl text-center transition-all duration-500 scale-50 opacity-30">
+                    🚗
+                </div>
+                <div id="car-color-bar" class="w-32 h-2 mx-auto mt-4 rounded-full transition-all duration-500 bg-gray-300"></div>
+            </div>
+
+            <!-- Car Type Selection -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-3 text-gray-800">1️⃣ 차체 선택 (필수)</h2>
+                <div class="grid grid-cols-2 gap-3" id="car-types"></div>
+            </div>
+
+            <!-- Power Type Selection -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-3 text-gray-800">2️⃣ 동력 장치 (필수)</h2>
+                <div class="grid grid-cols-2 gap-3" id="power-types"></div>
+            </div>
+
+            <!-- Additional Features -->
+            <div class="mb-6">
+                <h2 class="text-xl font-bold mb-3 text-gray-800">3️⃣ 부가 기능 (선택)</h2>
+                <div class="grid grid-cols-2 gap-3" id="features"></div>
+            </div>
+
+            <!-- Complete Button -->
+            <button id="complete-btn" class="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all">
+                🎉 자동차 완성하기
+            </button>
+        </div>
+    </div>
+
+    <!-- Receipt Modal (hidden by default) -->
+    <div id="receipt-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full max-h-screen overflow-y-auto">
+            <h2 class="text-3xl font-bold text-center mb-6 text-purple-600">🎉 완성된 자동차</h2>
+            
+            <div class="bg-gray-50 rounded-xl p-6 mb-6">
+                <div id="receipt-car-icon" class="text-8xl text-center mb-4 transition-all duration-500">🚗</div>
+                <div id="receipt-color-bar" class="w-32 h-2 mx-auto rounded-full bg-gray-300"></div>
+            </div>
+
+            <div id="receipt-details" class="space-y-3 mb-6"></div>
+
+            <div class="border-t-2 border-dashed border-gray-300 pt-4 mb-6">
+                <div class="flex justify-between items-center text-xl font-bold">
+                    <span>남은 예산</span>
+                    <span id="receipt-remaining" class="text-green-600">0원</span>
+                </div>
+                <div class="flex justify-between items-center text-lg text-gray-600 mt-2">
+                    <span>총 사용액</span>
+                    <span id="receipt-spent">0원</span>
+                </div>
+            </div>
+
+            <button id="reset-btn" class="w-full bg-gradient-to-r from-purple-500 to-blue-500 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all">
+                다시 만들기 🔄
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const INITIAL_BUDGET = 600;
+        let budget = INITIAL_BUDGET;
+        let selectedCarType = null;
+        let selectedPowerType = null;
+        let selectedFeatures = [];
+        let carColor = 'white';
+
+        const carTypes = [
+            { id: 'sedan', name: '세단', price: 300, icon: '🚗' },
+            { id: 'suv', name: 'SUV', price: 350, icon: '🚙' }
+        ];
+
+        const powerTypes = [
+            { id: 'gasoline', name: '내연기관', price: 50, icon: '⛽' },
+            { id: 'electric', name: '전동기', price: 150, icon: '🔋' },
+            { id: 'hybrid', name: '하이브리드', price: 100, icon: '🔄' },
+            { id: 'plugin', name: '플러그인 하이브리드', price: 150, icon: '🔌' },
+            { id: 'hydrogen', name: '수소', price: 200, icon: '💧' }
+        ];
+
+        const additionalFeatures = [
+            { id: 'performance', name: '동력 성능 향상', price: 60, icon: '⚡' },
+            { id: 'passenger', name: '승객 안전', price: 40, icon: '🛡️' },
+            { id: 'pedestrian', name: '보행자 안전', price: 40, icon: '🚶' },
+            { id: 'navigation', name: '네비게이션', price: 30, icon: '🧭' },
+            { id: 'seats', name: '열선 통풍 시트', price: 30, icon: '💺' },
+            { id: 'autonomous', name: '자율주행 2단계', price: 40, icon: '✨' },
+            { id: 'color', name: '자동차 색상 변경', price: 40, icon: '🎨' }
+        ];
+
+        function updateBudgetDisplay() {
+            document.getElementById('budget-display').textContent = budget + '원';
+            const percentage = (budget / INITIAL_BUDGET) * 100;
+            const budgetBar = document.getElementById('budget-bar');
+            budgetBar.style.width = percentage + '%';
+            
+            if (percentage > 50) {
+                budgetBar.className = 'h-full rounded-full transition-all duration-300 bg-green-500';
+            } else if (percentage > 20) {
+                budgetBar.className = 'h-full rounded-full transition-all duration-300 bg-yellow-500';
+            } else {
+                budgetBar.className = 'h-full rounded-full transition-all duration-300 bg-red-500';
+            }
+        }
+
+        function updateCarPreview() {
+            const preview = document.getElementById('car-preview');
+            if (selectedCarType) {
+                preview.textContent = selectedCarType.icon;
+                preview.className = 'text-8xl text-center transition-all duration-500 scale-100';
+            } else {
+                preview.textContent = '🚗';
+                preview.className = 'text-8xl text-center transition-all duration-500 scale-50 opacity-30';
+            }
+
+            const colorBar = document.getElementById('car-color-bar');
+            if (carColor === 'white') {
+                colorBar.className = 'w-32 h-2 mx-auto mt-4 rounded-full transition-all duration-500 bg-gray-300';
+            } else if (carColor === 'blue') {
+                colorBar.className = 'w-32 h-2 mx-auto mt-4 rounded-full transition-all duration-500 bg-blue-500';
+            } else {
+                colorBar.className = 'w-32 h-2 mx-auto mt-4 rounded-full transition-all duration-500 bg-red-500';
+            }
+        }
+
+        function selectCarType(carId) {
+            const car = carTypes.find(c => c.id === carId);
+            const oldPrice = selectedCarType ? selectedCarType.price : 0;
+            const newBudget = budget + oldPrice - car.price;
+            
+            if (newBudget < 0) {
+                alert('예산이 부족합니다! 💸');
+                return;
+            }
+            
+            selectedCarType = car;
+            budget = newBudget;
+            updateBudgetDisplay();
+            updateCarPreview();
+            renderCarTypes();
+        }
+
+        function selectPowerType(powerId) {
+            const power = powerTypes.find(p => p.id === powerId);
+            const oldPrice = selectedPowerType ? selectedPowerType.price : 0;
+            const newBudget = budget + oldPrice - power.price;
+            
+            if (newBudget < 0) {
+                alert('예산이 부족합니다! 💸');
+                return;
+            }
+            
+            selectedPowerType = power;
+            budget = newBudget;
+            updateBudgetDisplay();
+            renderPowerTypes();
+        }
+
+        function toggleFeature(featureId) {
+            const feature = additionalFeatures.find(f => f.id === featureId);
+            const isSelected = selectedFeatures.find(f => f.id === feature.id);
+            
+            if (isSelected) {
+                selectedFeatures = selectedFeatures.filter(f => f.id !== feature.id);
+                budget += feature.price;
+                if (feature.id === 'color') {
+                    carColor = 'white';
+                    updateCarPreview();
+                }
+            } else {
+                if (budget - feature.price < 0) {
+                    alert('예산이 부족합니다! 💸');
+                    return;
+                }
+                selectedFeatures.push(feature);
+                budget -= feature.price;
+                if (feature.id === 'color') {
+                    carColor = 'blue';
+                    updateCarPreview();
+                }
+            }
+            updateBudgetDisplay();
+            renderFeatures();
+        }
+
+        function renderCarTypes() {
+            const container = document.getElementById('car-types');
+            container.innerHTML = carTypes.map(car => {
+                const isSelected = selectedCarType && selectedCarType.id === car.id;
+                const btnClass = isSelected 
+                    ? 'border-purple-500 bg-purple-50 shadow-lg' 
+                    : 'border-gray-200 bg-white hover:border-purple-300';
+                return `
+                    <button onclick="selectCarType('${car.id}')" 
+                        class="p-4 rounded-xl border-2 transition-all ${btnClass}">
+                        <div class="text-4xl mb-2">${car.icon}</div>
+                        <div class="font-semibold text-sm">${car.name}</div>
+                        <div class="text-purple-600 font-bold text-sm">${car.price}원</div>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderPowerTypes() {
+            const container = document.getElementById('power-types');
+            container.innerHTML = powerTypes.map(power => {
+                const isSelected = selectedPowerType && selectedPowerType.id === power.id;
+                const btnClass = isSelected 
+                    ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                    : 'border-gray-200 bg-white hover:border-blue-300';
+                return `
+                    <button onclick="selectPowerType('${power.id}')" 
+                        class="p-4 rounded-xl border-2 transition-all ${btnClass}">
+                        <div class="text-3xl mb-2">${power.icon}</div>
+                        <div class="font-semibold text-sm">${power.name}</div>
+                        <div class="text-blue-600 font-bold text-sm">${power.price}원</div>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function renderFeatures() {
+            const container = document.getElementById('features');
+            container.innerHTML = additionalFeatures.map(feature => {
+                const isSelected = selectedFeatures.find(f => f.id === feature.id);
+                const btnClass = isSelected 
+                    ? 'border-green-500 bg-green-50 shadow-lg' 
+                    : 'border-gray-200 bg-white hover:border-green-300';
+                return `
+                    <button onclick="toggleFeature('${feature.id}')" 
+                        class="p-4 rounded-xl border-2 transition-all ${btnClass}">
+                        <div class="mb-2 text-2xl">${feature.icon}</div>
+                        <div class="font-semibold text-xs mb-1">${feature.name}</div>
+                        <div class="text-green-600 font-bold text-sm">${feature.price}원</div>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function completeCar() {
+            if (!selectedCarType || !selectedPowerType) {
+                alert('차체와 동력 장치는 필수 선택입니다! 🚗⚡');
+                return;
+            }
+
+            document.getElementById('receipt-car-icon').textContent = selectedCarType.icon;
+            
+            const receiptColorBar = document.getElementById('receipt-color-bar');
+            if (carColor === 'white') {
+                receiptColorBar.className = 'w-32 h-2 mx-auto rounded-full bg-gray-300';
+            } else if (carColor === 'blue') {
+                receiptColorBar.className = 'w-32 h-2 mx-auto rounded-full bg-blue-500';
+            } else {
+                receiptColorBar.className = 'w-32 h-2 mx-auto rounded-full bg-red-500';
+            }
+
+            let detailsHTML = `
+                <div class="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                    <span class="font-semibold">차체</span>
+                    <span>${selectedCarType.name} (${selectedCarType.price}원)</span>
+                </div>
+                <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
+                    <span class="font-semibold">동력</span>
+                    <span>${selectedPowerType.name} (${selectedPowerType.price}원)</span>
+                </div>
+            `;
+
+            if (selectedFeatures.length > 0) {
+                detailsHTML += `
+                    <div class="p-3 bg-yellow-50 rounded-lg">
+                        <div class="font-semibold mb-2">부가 기능</div>
+                        ${selectedFeatures.map(f => `
+                            <div class="flex justify-between ml-4 text-sm">
+                                <span>• ${f.name}</span>
+                                <span>${f.price}원</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            document.getElementById('receipt-details').innerHTML = detailsHTML;
+            document.getElementById('receipt-remaining').textContent = budget + '원';
+            document.getElementById('receipt-spent').textContent = (INITIAL_BUDGET - budget) + '원';
+            document.getElementById('receipt-modal').classList.remove('hidden');
+        }
+
+        function resetGame() {
+            budget = INITIAL_BUDGET;
+            selectedCarType = null;
+            selectedPowerType = null;
+            selectedFeatures = [];
+            carColor = 'white';
+            updateBudgetDisplay();
+            updateCarPreview();
+            renderCarTypes();
+            renderPowerTypes();
+            renderFeatures();
+            document.getElementById('receipt-modal').classList.add('hidden');
+        }
+
+        document.getElementById('complete-btn').addEventListener('click', completeCar);
+        document.getElementById('reset-btn').addEventListener('click', resetGame);
+        
+        renderCarTypes();
+        renderPowerTypes();
+        renderFeatures();
+    </script>
+</body>
+</html>
