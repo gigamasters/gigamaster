@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>해저 터널 탐구 활동</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:'Apple SD Gothic Neo','Noto Sans KR','맑은 고딕',sans-serif;
+  background:#EEF2F7;color:#212121;
+  padding:14px;max-width:900px;margin:0 auto;
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ── HEADER ── */
+.header{
+  background:linear-gradient(135deg,#0D47A1,#1976D2,#42A5F5);
+  border-radius:20px;padding:22px 24px;color:white;
+  margin-bottom:16px;box-shadow:0 8px 24px rgba(13,71,161,.35);
+}
+.badge-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.badge{
+  background:rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.4);
+  padding:3px 11px;border-radius:20px;font-size:11px;font-weight:700;
+}
+.header h1{font-size:20px;font-weight:800;line-height:1.45;margin-bottom:12px;}
+.goal-box{
+  background:rgba(255,255,255,.17);border:1px solid rgba(255,255,255,.3);
+  border-radius:10px;padding:11px 15px;
+}
+.goal-label{font-size:11px;font-weight:700;opacity:.75;letter-spacing:.8px;margin-bottom:4px;}
+.goal-text{font-size:13px;line-height:1.65;}
+
+/* ── CARD ── */
+.card{
+  background:white;border-radius:18px;padding:20px;
+  margin-bottom:16px;box-shadow:0 3px 14px rgba(0,0,0,.07);
+}
+.intro-text{font-size:13.5px;line-height:1.85;color:#444;margin-bottom:14px;}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:0;margin-bottom:14px;border-radius:12px;overflow:hidden;border:1.5px solid #E0E0E0;}
+.tab{
+  flex:1;padding:10px;text-align:center;font-size:13px;font-weight:700;
+  background:#F5F5F5;color:#888;cursor:pointer;transition:all .2s;border:none;
+  font-family:inherit;
+}
+.tab.active{background:#1976D2;color:white;}
+
+/* ── IMAGE SECTION ── */
+.img-wrap{
+  position:relative;border-radius:12px;overflow:hidden;
+  background:#f0f4f8;min-height:180px;
+}
+
+/* 업로드 존 (이미지 로드 실패 시 fallback) */
+.upload-zone{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:12px;padding:30px 20px;text-align:center;
+  border:2.5px dashed #90CAF9;border-radius:12px;
+  background:linear-gradient(135deg,#E3F2FD,#EDE7F6);
+  cursor:pointer;width:100%;min-height:200px;transition:border-color .2s;
+}
+.upload-zone .icon{font-size:44px;}
+.upload-zone p{font-size:14px;color:#555;font-weight:600;}
+.upload-zone small{font-size:12px;color:#999;}
+.upload-zone input{display:none;}
+.upload-zone .up-btn{
+  background:#1976D2;color:white;border:none;
+  border-radius:10px;padding:9px 22px;font-size:13px;
+  font-weight:700;cursor:pointer;font-family:inherit;
+}
+
+/* 이미지 박스 */
+#imgBox{position:relative;width:100%;display:none;}
+#mainImg{
+  width:100%;display:block;border-radius:12px;
+  animation:imgReveal .8s ease both;
+}
+@keyframes imgReveal{
+  from{opacity:0;transform:scale(.97);}
+  to{opacity:1;transform:scale(1);}
+}
+
+/* 핫스팟 */
+.hotspot{
+  position:absolute;transform:translate(-50%,-50%);
+  width:22px;height:22px;cursor:pointer;z-index:10;
+}
+.hotspot .ring{
+  position:absolute;inset:0;border-radius:50%;
+  background:rgba(255,80,80,.85);
+  animation:pulse 2s ease-in-out infinite;
+}
+.hotspot .ring2{
+  position:absolute;inset:-6px;border-radius:50%;
+  border:2px solid rgba(255,80,80,.5);
+  animation:pulse2 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.9;}50%{transform:scale(1.2);opacity:.6;}}
+@keyframes pulse2{0%{transform:scale(.8);opacity:.7;}100%{transform:scale(1.6);opacity:0;}}
+.hotspot.blue .ring{background:rgba(30,136,229,.85);}
+.hotspot.blue .ring2{border-color:rgba(30,136,229,.5);}
+.hotspot.green .ring{background:rgba(46,160,67,.85);}
+.hotspot.green .ring2{border-color:rgba(46,160,67,.5);}
+
+/* 팝업 */
+.hs-popup{
+  position:absolute;background:rgba(10,20,50,.9);color:white;
+  border-radius:10px;padding:10px 14px;font-size:12px;line-height:1.65;
+  width:180px;z-index:20;pointer-events:none;
+  opacity:0;transform:scale(.85) translateY(-4px);
+  transition:opacity .2s,transform .2s;white-space:pre-line;
+  border:1px solid rgba(100,180,255,.3);
+  box-shadow:0 6px 20px rgba(0,0,0,.4);
+}
+.hs-popup.show{opacity:1;transform:scale(1) translateY(0);}
+.hs-popup .pop-title{font-weight:700;font-size:13px;margin-bottom:5px;color:#90CAF9;}
+
+/* 단면도 하이라이트 */
+#secHighlight{
+  position:absolute;border:2.5px solid rgba(0,200,255,.7);
+  border-radius:8px;
+  box-shadow:0 0 14px rgba(0,200,255,.45),inset 0 0 14px rgba(0,200,255,.1);
+  animation:secGlow 3s ease-in-out infinite;
+  pointer-events:none;z-index:6;display:none;
+}
+@keyframes secGlow{
+  0%,100%{box-shadow:0 0 10px rgba(0,200,255,.35),inset 0 0 8px rgba(0,200,255,.08);}
+  50%{box-shadow:0 0 22px rgba(0,200,255,.75),inset 0 0 16px rgba(0,200,255,.2);}
+}
+
+/* ── CANVAS ── */
+.canvas-wrap{
+  border-radius:12px;overflow:hidden;
+  background:#091222;width:100%;
+  box-shadow:inset 0 0 20px rgba(0,0,0,.5);
+}
+#tunnelCanvas{display:block;width:100%;height:210px;}
+
+/* ── FACT CARDS ── */
+.facts-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:13px;}
+.fact{background:#EEF2F7;border-radius:10px;padding:10px 8px;text-align:center;}
+.fact .val{font-size:22px;font-weight:800;color:#1565C0;line-height:1.15;}
+.fact .unit{font-size:11px;color:#888;margin-top:1px;}
+.fact .desc{font-size:11px;color:#666;margin-top:3px;}
+
+/* ── TIP ── */
+.tip{
+  background:#FFFDE7;border:1.5px solid #FFC107;
+  border-radius:10px;margin:12px 0;overflow:hidden;
+}
+.tip-header{
+  display:flex;align-items:center;gap:7px;
+  padding:10px 14px;cursor:pointer;user-select:none;
+  font-weight:700;font-size:13px;color:#E65100;
+}
+.tip-arrow{margin-left:auto;font-size:11px;transition:transform .25s;}
+.tip-arrow.open{transform:rotate(180deg);}
+.tip-body{padding:0 14px;max-height:0;overflow:hidden;transition:max-height .35s ease,padding .3s;}
+.tip-body.open{max-height:600px;padding:0 14px 13px;}
+.tip-body ul{padding-left:17px;list-style:disc;}
+.tip-body li{font-size:12.5px;color:#555;line-height:1.75;margin-bottom:2px;}
+
+/* ── Q HEADER ── */
+.q-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;}
+.q-num{
+  min-width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:13px;color:white;flex-shrink:0;margin-top:1px;
+}
+.q-title{font-size:14.5px;font-weight:700;line-height:1.5;}
+.q-sub{font-size:12px;color:#888;margin-top:3px;}
+
+/* ── Q1 GRID ── */
+.q1-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+.q1-col{border-radius:12px;overflow:hidden;}
+.q1-head{padding:9px;text-align:center;font-size:12.5px;font-weight:700;color:white;}
+.col-sea{background:#1565C0;}.col-air{background:#6A1B9A;}.col-life{background:#2E7D32;}
+.q1-body{
+  background:#F8FAFC;border:1.5px solid #E0E0E0;
+  border-top:none;border-radius:0 0 12px 12px;padding:8px;
+}
+
+/* ── Q2 GRID ── */
+.q2-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.q2-col{border-radius:12px;overflow:hidden;}
+.q2-head{padding:10px;text-align:center;font-size:13px;font-weight:700;color:white;}
+.econ-head{background:#1565C0;}.env-head{background:#2E7D32;}
+.q2-body{
+  background:#F8FAFC;border:1.5px solid #E0E0E0;
+  border-top:none;border-radius:0 0 12px 12px;padding:10px;
+}
+.sub-sec{margin-bottom:14px;}
+.sub-label{
+  display:inline-block;padding:2px 10px;
+  border-radius:20px;font-size:11.5px;font-weight:700;margin-bottom:7px;
+}
+.pro-lbl{background:#E8F5E9;color:#2E7D32;}
+.con-lbl{background:#FFEBEE;color:#C62828;}
+
+/* ── INPUT ── */
+.input-area{
+  width:100%;border:1.5px solid #DDE1E7;
+  border-radius:8px;padding:8px 9px;
+  font-size:12.5px;font-family:inherit;
+  resize:vertical;min-height:62px;
+  margin-bottom:7px;outline:none;
+  background:white;color:#222;
+  transition:border-color .2s;line-height:1.6;
+}
+.input-area:focus{border-color:#1976D2;box-shadow:0 0 0 2px rgba(25,118,210,.12);}
+.add-btn{
+  width:100%;background:none;border:1.5px dashed #BBB;border-radius:8px;
+  padding:7px;font-size:12px;color:#999;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:4px;
+  transition:all .2s;font-family:inherit;
+}
+.add-btn:hover,.add-btn:active{border-color:#1976D2;color:#1976D2;}
+
+/* ── EVAL ── */
+.eval-card{
+  background:linear-gradient(135deg,#EDE7F6,#F3E5F5);
+  border-radius:18px;padding:18px 20px;margin-bottom:14px;
+}
+.eval-title{font-size:14px;font-weight:700;color:#4527A0;margin-bottom:12px;}
+.eval-row{
+  background:white;border-radius:10px;
+  padding:11px 14px;margin-bottom:8px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+}
+.eval-q{font-size:12.5px;line-height:1.55;flex:1;}
+.eval-btns{display:flex;gap:7px;flex-shrink:0;}
+.eval-btn{
+  padding:5px 14px;border-radius:20px;border:1.5px solid #CCC;
+  background:white;font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s;
+}
+.eval-btn.yes.on{background:#1976D2;border-color:#1976D2;color:white;}
+.eval-btn.no.on{background:#E53935;border-color:#E53935;color:white;}
+
+/* ── BOTTOM ── */
+.autosave{text-align:center;font-size:11px;color:#4CAF50;height:18px;transition:opacity .5s;margin-bottom:8px;}
+.save-btn{
+  width:100%;background:linear-gradient(135deg,#0D47A1,#42A5F5);
+  color:white;border:none;border-radius:14px;
+  padding:14px;font-size:15px;font-weight:700;cursor:pointer;
+  box-shadow:0 4px 14px rgba(13,71,161,.3);font-family:inherit;margin-bottom:20px;
+}
+
+/* ── INFO BOX ── */
+.info-box{
+  background:#E3F2FD;border:1.5px solid #90CAF9;border-radius:10px;
+  padding:11px 14px;margin-bottom:12px;font-size:12.5px;line-height:1.7;color:#1565C0;
+}
+.info-box strong{color:#0D47A1;}
+
+@media(max-width:580px){
+  .q1-grid{grid-template-columns:1fr;}
+  .q2-grid{grid-template-columns:1fr;}
+}
+@media print{
+  body{background:white;padding:0;}
+  .save-btn,.autosave,.tab-bar{display:none;}
+  .card,.eval-card{box-shadow:none;border:1px solid #EEE;}
+  .header{box-shadow:none;}
+  .tip-body{max-height:none!important;padding:0 14px 13px!important;}
+  #imgBox{display:block!important;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<div class="header">
+  <div class="badge-row">
+    <span class="badge">📚 주제 활동</span>
+    <span class="badge">🔧 기술학적 지식이해 능력</span>
+  </div>
+  <h1>섬과 육지를 해저 터널로 연결하면<br>어떤 변화가 나타날까?</h1>
+  <div class="goal-box">
+    <div class="goal-label">🎯 활동 목표</div>
+    <div class="goal-text">섬과 육지가 해저 터널로 연결될 경우의 변화를 예측할 수 있다.</div>
+  </div>
+</div>
+
+<!-- ═══ TUNNEL SECTION ═══ -->
+<div class="card">
+  <p class="intro-text">
+    다음은 <strong>영국과 프랑스를 연결하는 채널 터널(Channel Tunnel, 영불 해협 터널)</strong>입니다.
+    우리나라의 큰 섬과 내륙을 이처럼 고속 철도로 연결하면 어떤 변화가 나타날지
+    조사하고 토의해 봅시다.
+  </p>
+
+  <!-- 탭 -->
+  <div class="tab-bar">
+    <button class="tab active" onclick="switchTab('img')">🖼️ 교과서 그림</button>
+    <button class="tab" onclick="switchTab('canvas')">🚄 3D 애니메이션</button>
+  </div>
+
+  <!-- ─ 이미지 탭 ─ -->
+  <div id="tab-img">
+    <div class="img-wrap" id="imgWrap">
+
+      <!-- 업로드 fallback (이미지 로드 실패 시에만 표시) -->
+      <div class="upload-zone" id="uploadZone" style="display:none"
+           onclick="document.getElementById('fileInput').click()"
+           ondragover="event.preventDefault();this.style.borderColor='#1976D2'"
+           ondragleave="this.style.borderColor='#90CAF9'"
+           ondrop="handleDrop(event)">
+        <div class="icon">🖼️</div>
+        <p>이미지를 불러오지 못했습니다</p>
+        <small>직접 이미지를 선택하거나 드래그하세요</small>
+        <button class="up-btn" onclick="event.stopPropagation();document.getElementById('fileInput').click()">이미지 선택하기</button>
+        <input type="file" id="fileInput" accept="image/*" onchange="handleUpload(event)">
+      </div>
+
+      <!-- 이미지 + 오버레이 -->
+      <div id="imgBox">
+        <!-- ✅ 교과서 이미지 직접 URL 삽입 -->
+        <img id="mainImg"
+             src="https://q.mirae-n.com/e2DZI"
+             alt="채널 터널 다이어그램"
+             crossorigin="anonymous"
+             onload="onImgLoaded()"
+             onerror="onImgError()">
+
+        <!-- 핫스팟 (수정: hs4 서비스 터널 가운데 위치로 이동) -->
+        <div class="hotspot blue"  id="hs1" style="top:7%;left:38%"    onclick="showPop(1)"><div class="ring"></div><div class="ring2"></div></div>
+        <div class="hotspot blue"  id="hs2" style="top:35%;right:4%"   onclick="showPop(2)"><div class="ring"></div><div class="ring2"></div></div>
+        <div class="hotspot"       id="hs3" style="top:40%;left:26%"   onclick="showPop(3)"><div class="ring"></div><div class="ring2"></div></div>
+        <!-- ✅ 서비스 터널: 가운데 터널 위치 (두 철도 터널 사이 중앙) -->
+        <div class="hotspot"       id="hs4" style="top:52%;left:21%"   onclick="showPop(4)"><div class="ring"></div><div class="ring2"></div></div>
+        <div class="hotspot"       id="hs5" style="top:67%;left:12%"   onclick="showPop(5)"><div class="ring"></div><div class="ring2"></div></div>
+        <div class="hotspot green" id="hs6" style="top:53%;left:60%"   onclick="showPop(6)"><div class="ring"></div><div class="ring2"></div></div>
+        <div class="hotspot green" id="hs7" style="top:67%;left:67%"   onclick="showPop(7)"><div class="ring"></div><div class="ring2"></div></div>
+        <div class="hotspot green" id="hs8" style="top:67%;left:77%"   onclick="showPop(8)"><div class="ring"></div><div class="ring2"></div></div>
+        <div class="hotspot green" id="hs9" style="top:67%;right:7%"   onclick="showPop(9)"><div class="ring"></div><div class="ring2"></div></div>
+
+        <!-- 팝업 툴팁 -->
+        <div class="hs-popup" id="pop1" style="top:2%;left:41%">
+          <div class="pop-title">🇬🇧 영국 (UK)</div>채널 터널의 영국쪽 입구는<br>켄트주 폴크스턴에 위치합니다.</div>
+        <div class="hs-popup" id="pop2" style="top:25%;right:5%">
+          <div class="pop-title">🇫🇷 프랑스</div>프랑스쪽 입구는<br>노르칼레주 코켈에 위치합니다.</div>
+        <div class="hs-popup" id="pop3" style="top:30%;left:28%">
+          <div class="pop-title">🚄 철도 터널 (F→E)</div>프랑스에서 영국 방향으로<br>유로스타 열차가 운행합니다.<br>최고속도 약 300 km/h</div>
+        <div class="hs-popup" id="pop4" style="top:42%;left:23%">
+          <div class="pop-title">🔧 서비스 터널 (중앙)</div>두 철도 터널 사이 중앙에 위치.<br>평상시: 터널 관리·환기 통로<br>비상시: 피난 대피로로 사용합니다.</div>
+        <div class="hs-popup" id="pop5" style="top:57%;left:13%">
+          <div class="pop-title">🚄 철도 터널 (E→F)</div>영국에서 프랑스 방향으로<br>유로스타 열차가 운행합니다.</div>
+        <div class="hs-popup" id="pop6" style="top:43%;left:45%">
+          <div class="pop-title">📐 터널 단면</div>3개 터널의 단면 구조입니다.<br>각 터널의 역할이 다릅니다.</div>
+        <div class="hs-popup" id="pop7" style="top:57%;left:53%">
+          <div class="pop-title">🧍 피난 통로</div>비상시 승객이 대피하는<br>구조 차량이 대기합니다.</div>
+        <div class="hs-popup" id="pop8" style="top:57%;left:63%">
+          <div class="pop-title">❄️ 냉각 시스템</div>터널 내부 온도 조절을 위한<br>냉각·환기 설비가 운영됩니다.</div>
+        <div class="hs-popup" id="pop9" style="top:57%;right:2%">
+          <div class="pop-title">🚗 자동차 운반 기차</div>자동차를 실어 나르는<br>르 셔틀(Le Shuttle)이 운행합니다.</div>
+
+        <!-- 단면도 하이라이트 -->
+        <div id="secHighlight"></div>
+
+        <!-- 이미지 재변경 버튼 -->
+        <button onclick="resetImage()" style="
+          position:absolute;top:8px;right:8px;
+          background:rgba(0,0,0,.55);color:white;
+          border:1px solid rgba(255,255,255,.3);border-radius:8px;
+          padding:5px 10px;font-size:11px;cursor:pointer;
+          font-family:inherit;z-index:30;">↩ 이미지 변경</button>
+      </div>
+    </div>
+
+    <!-- 범례 -->
+    <div id="legend" style="display:none;margin-top:10px;font-size:11.5px;color:#666;line-height:1.8;padding:10px 12px;background:#F5F5F5;border-radius:8px;">
+      🔴 = 터널 구성 요소 &nbsp;|&nbsp; 🔵 = 국가·지역 &nbsp;|&nbsp; 🟢 = 터널 단면 정보<br>
+      <strong>👆 점을 탭하면 상세 설명이 나타납니다!</strong>
+    </div>
+  </div>
+
+  <!-- ─ 캔버스 탭 ─ -->
+  <div id="tab-canvas" style="display:none">
+    <div class="canvas-wrap">
+      <canvas id="tunnelCanvas"></canvas>
+    </div>
+  </div>
+
+  <div class="facts-row">
+    <div class="fact">
+      <div class="val">50</div><div class="unit">km</div>
+      <div class="desc">터널 총 길이</div>
+    </div>
+    <div class="fact">
+      <div class="val">39</div><div class="unit">km</div>
+      <div class="desc">해저 구간 길이</div>
+    </div>
+    <div class="fact">
+      <div class="val" style="font-size:17px;line-height:1.25">2시간<br>15분</div>
+      <div class="desc">런던 → 파리</div>
+    </div>
+  </div>
+
+  <!-- ✅ 채널 터널 명칭 안내 -->
+  <div class="info-box" style="margin-top:13px">
+    📌 <strong>채널 터널(Channel Tunnel)</strong>이 정식 명칭입니다.
+    <strong>유로터널(Eurotunnel)</strong>은 터널을 건설·운영한 <em>회사 이름</em>(현재는 Getlink로 개명)이며, 터널 이름이 아닙니다.
+    열차 서비스 <strong>유로스타(Eurostar)</strong>는 별도 회사가 운영합니다.
+  </div>
+</div>
+
+<!-- ═══ Q1 ═══ -->
+<div class="card">
+  <div class="q-header">
+    <div class="q-num" style="background:#00897B">탐</div>
+    <div>
+      <div class="q-title">① 섬이 고속 철도로 내륙과 연결된다면 기존의 수송 수단과 섬의 생활에 어떤 변화가 일어날지 예측해 봅시다.</div>
+      <div class="q-sub">각 항목에 예상되는 변화를 자유롭게 작성하세요.</div>
+    </div>
+  </div>
+  <div class="tip">
+    <div class="tip-header" onclick="toggleTip(this)">
+      💡 활동 Tip — 예측에 도움이 되는 힌트
+      <span class="tip-arrow open">▼</span>
+    </div>
+    <div class="tip-body open">
+      <ul>
+        <li><strong>해상 수송 수단:</strong> 여객선(페리), 화물선의 이용객·화물량이 어떻게 달라질지 생각해 보세요.</li>
+        <li><strong>항공 수송 수단:</strong> 비행기 노선 수, 이용 요금, 이용률이 어떻게 변할지 예측해 보세요.</li>
+        <li><strong>섬 생활의 변화:</strong> 인구 변화, 물가, 관광객 수, 교육·의료 접근성 등을 고려해 보세요.</li>
+        <li>현재 섬 지역(예: 제주도, 울릉도)의 생활을 살펴보고 철도 연결 후 달라지는 점을 비교해 봅시다.</li>
+        <li>채널 터널 총 길이 <strong>50 km</strong>, 해저 구간 <strong>39 km</strong>, 런던↔파리 <strong>2시간 15분</strong></li>
+      </ul>
+    </div>
+  </div>
+  <div class="q1-grid">
+    <div class="q1-col">
+      <div class="q1-head col-sea">🚢 해상 수송 수단</div>
+      <div class="q1-body">
+        <div id="sea-inputs"><textarea class="input-area" placeholder="예: 여객선 이용객 감소, 화물선 운항 감소…"></textarea></div>
+        <button class="add-btn" onclick="addInput('sea-inputs')">＋ 항목 추가</button>
+      </div>
+    </div>
+    <div class="q1-col">
+      <div class="q1-head col-air">✈️ 항공 수송 수단</div>
+      <div class="q1-body">
+        <div id="air-inputs"><textarea class="input-area" placeholder="예: 항공 노선 감소, 항공 요금 하락…"></textarea></div>
+        <button class="add-btn" onclick="addInput('air-inputs')">＋ 항목 추가</button>
+      </div>
+    </div>
+    <div class="q1-col">
+      <div class="q1-head col-life">🏘️ 섬 생활의 변화</div>
+      <div class="q1-body">
+        <div id="life-inputs"><textarea class="input-area" placeholder="예: 관광객 증가, 인구 유입, 물가 안정…"></textarea></div>
+        <button class="add-btn" onclick="addInput('life-inputs')">＋ 항목 추가</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Q2 ═══ -->
+<div class="card">
+  <div class="q-header">
+    <div class="q-num" style="background:#F57C00">토</div>
+    <div>
+      <div class="q-title">② 섬과 육지의 연결점이 되는 도시에는 어떤 장단점이 있을지 경제적·환경적 측면에서 정리한 후 토의해 봅시다.</div>
+      <div class="q-sub">장점과 단점을 구체적으로 작성하고 모둠원과 의견을 나눠 보세요.</div>
+    </div>
+  </div>
+  <div class="tip">
+    <div class="tip-header" onclick="toggleTip(this)">
+      💡 활동 Tip — 경제적·환경적 측면 힌트
+      <span class="tip-arrow open">▼</span>
+    </div>
+    <div class="tip-body open">
+      <ul>
+        <li><strong>경제적 장점:</strong> 물류·유통비 절감, 관광산업 활성화, 지역 일자리 증가, 투자 유치 등</li>
+        <li><strong>경제적 단점:</strong> 막대한 건설·유지 비용, 기존 해운·항공업 종사자 피해, 물가 상승 등</li>
+        <li><strong>환경적 장점:</strong> 항공기 대비 온실가스 감소, 친환경 전기 철도 이용 확대 등</li>
+        <li><strong>환경적 단점:</strong> 터널 건설로 인한 해저 생태계 훼손, 소음·진동 피해, 해양 오염 우려 등</li>
+        <li>서비스 터널은 두 철도 터널 <strong>사이 중앙</strong>에 위치하며, 비상 시 <strong>대피로</strong>로 사용합니다.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="q2-grid">
+    <div class="q2-col">
+      <div class="q2-head econ-head">💰 경제적 측면</div>
+      <div class="q2-body">
+        <div class="sub-sec">
+          <span class="sub-label pro-lbl">👍 장점</span>
+          <div id="econ-pro"><textarea class="input-area" placeholder="경제적 장점을 작성하세요…"></textarea></div>
+          <button class="add-btn" onclick="addInput('econ-pro')">＋ 추가</button>
+        </div>
+        <div class="sub-sec">
+          <span class="sub-label con-lbl">👎 단점</span>
+          <div id="econ-con"><textarea class="input-area" placeholder="경제적 단점을 작성하세요…"></textarea></div>
+          <button class="add-btn" onclick="addInput('econ-con')">＋ 추가</button>
+        </div>
+      </div>
+    </div>
+    <div class="q2-col">
+      <div class="q2-head env-head">🌿 환경적 측면</div>
+      <div class="q2-body">
+        <div class="sub-sec">
+          <span class="sub-label pro-lbl">👍 장점</span>
+          <div id="env-pro"><textarea class="input-area" placeholder="환경적 장점을 작성하세요…"></textarea></div>
+          <button class="add-btn" onclick="addInput('env-pro')">＋ 추가</button>
+        </div>
+        <div class="sub-sec">
+          <span class="sub-label con-lbl">👎 단점</span>
+          <div id="env-con"><textarea class="input-area" placeholder="환경적 단점을 작성하세요…"></textarea></div>
+          <button class="add-btn" onclick="addInput('env-con')">＋ 추가</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ EVAL ═══ -->
+<div class="eval-card">
+  <div class="eval-title">✅ 평가하기</div>
+  <div class="eval-row">
+    <div class="eval-q">섬이 고속 철도로 연결될 경우 기존 수송 수단과 섬 생활의 변화를 분석하였는가?</div>
+    <div class="eval-btns">
+      <button class="eval-btn yes" onclick="setEval(this)">예</button>
+      <button class="eval-btn no"  onclick="setEval(this)">아니요</button>
+    </div>
+  </div>
+  <div class="eval-row">
+    <div class="eval-q">다양한 관점에서 해저 터널로 인한 경제적·환경적 측면에서의 변화를 예측하였는가?</div>
+    <div class="eval-btns">
+      <button class="eval-btn yes" onclick="setEval(this)">예</button>
+      <button class="eval-btn no"  onclick="setEval(this)">아니요</button>
+    </div>
+  </div>
+</div>
+<div class="autosave" id="autosaveMsg" style="opacity:0">✅ 자동 저장됨</div>
+<button class="save-btn" onclick="window.print()">🖨️ 활동지 출력 / PDF 저장</button>
+
+<!-- ═══ SCRIPT ═══ -->
+<script>
+/* ══ 이미지 로드 ══ */
+function onImgLoaded(){
+  document.getElementById('imgBox').style.display = 'block';
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('legend').style.display = 'block';
+  positionSecHighlight();
+  document.getElementById('secHighlight').style.display = 'block';
+}
+function onImgError(){
+  // URL 이미지 로드 실패 → localStorage 확인 → 없으면 업로드 존
+  try{
+    const saved = localStorage.getItem('tunnel_img_v3');
+    if(saved){ document.getElementById('mainImg').src = saved; return; }
+  }catch(e){}
+  document.getElementById('imgBox').style.display = 'none';
+  document.getElementById('uploadZone').style.display = 'flex';
+}
+// 시작 시: localStorage에 저장된 이미지 있으면 우선 사용
+(function(){
+  try{
+    const saved = localStorage.getItem('tunnel_img_v3');
+    if(saved) document.getElementById('mainImg').src = saved;
+  }catch(e){}
+})();
+
+function positionSecHighlight(){
+  const box = document.getElementById('imgBox');
+  const hl  = document.getElementById('secHighlight');
+  const w = box.offsetWidth, h = box.offsetHeight;
+  if(!w||!h) return;
+  hl.style.left   = (w * .545) + 'px';
+  hl.style.top    = (h * .44)  + 'px';
+  hl.style.width  = (w * .452) + 'px';
+  hl.style.height = (h * .54)  + 'px';
+}
+window.addEventListener('resize', ()=>{
+  if(document.getElementById('imgBox').style.display!=='none') positionSecHighlight();
+});
+
+/* ══ 업로드 fallback ══ */
+function handleUpload(e){ const f=e.target.files[0]; if(f) loadFile(f); }
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('uploadZone').style.borderColor='#90CAF9';
+  const f=e.dataTransfer.files[0];
+  if(f&&f.type.startsWith('image/')) loadFile(f);
+}
+function loadFile(file){
+  const r=new FileReader();
+  r.onload=ev=>{
+    const d=ev.target.result;
+    try{ localStorage.setItem('tunnel_img_v3',d); }catch(e){}
+    document.getElementById('mainImg').src=d;
+  };
+  r.readAsDataURL(file);
+}
+function resetImage(){
+  localStorage.removeItem('tunnel_img_v3');
+  document.getElementById('mainImg').src='https://q.mirae-n.com/e2DZI';
+}
+
+/* ══ 팝업 ══ */
+let activePop=null;
+function showPop(n){
+  const pop=document.getElementById('pop'+n);
+  if(activePop===n){ pop.classList.remove('show'); activePop=null; return; }
+  document.querySelectorAll('.hs-popup').forEach(p=>p.classList.remove('show'));
+  pop.classList.add('show'); activePop=n;
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.hotspot')&&!e.target.closest('.hs-popup')){
+    document.querySelectorAll('.hs-popup').forEach(p=>p.classList.remove('show'));
+    activePop=null;
+  }
+});
+
+/* ══ 탭 전환 ══ */
+let canvasOn=false;
+function switchTab(t){
+  document.getElementById('tab-img').style.display    = t==='img'    ? '' : 'none';
+  document.getElementById('tab-canvas').style.display = t==='canvas' ? '' : 'none';
+  document.querySelectorAll('.tab').forEach((b,i)=>{
+    b.classList.toggle('active',(i===0&&t==='img')||(i===1&&t==='canvas'));
+  });
+  if(t==='canvas'&&!canvasOn){ canvasOn=true; startCanvas(); }
+}
+
+/* ══════════════════════════════
+   3D CANVAS ANIMATION
+══════════════════════════════ */
+function startCanvas(){
+  const canvas=document.getElementById('tunnelCanvas');
+  const ctx=canvas.getContext('2d');
+  let W,H,trainX=-150,animT=0,bubbles=[],stars=[];
+
+  function initP(){
+    bubbles=Array.from({length:14},()=>({
+      x:Math.random()*W,y:H*.35+Math.random()*(H*.55),
+      r:1.5+Math.random()*3.5,spd:.25+Math.random()*.5,op:.2+Math.random()*.35
+    }));
+    stars=Array.from({length:18},()=>({
+      x:Math.random()*W,y:Math.random()*(H*.38),
+      r:.5+Math.random()*1.5,op:.4+Math.random()*.5
+    }));
+  }
+  function resize(){
+    W=canvas.offsetWidth||800;H=210;
+    canvas.width=W;canvas.height=H;trainX=-150;initP();
+  }
+  resize();
+  new ResizeObserver(resize).observe(canvas.parentElement);
+
+  function rrect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+  }
+
+  function frame(){
+    if(document.getElementById('tab-canvas').style.display==='none'){requestAnimationFrame(frame);return;}
+    animT+=.018;
+    if(!W){requestAnimationFrame(frame);return;}
+    ctx.clearRect(0,0,W,H);
+    const wL=H*.40,gL=H*.47,tCY=H*.73,tR=H*.125,lW=W*.145;
+
+    /* 하늘 */
+    const skyG=ctx.createLinearGradient(0,0,0,wL);
+    skyG.addColorStop(0,'#6EC6E6');skyG.addColorStop(1,'#A8D8F0');
+    ctx.fillStyle=skyG;ctx.fillRect(0,0,W,wL);
+
+    stars.forEach(s=>{
+      ctx.fillStyle=`rgba(255,255,255,${s.op*(Math.sin(animT*1.5+s.x)*.3+.7)})`;
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+    });
+
+    function cloud(cx,cy,sc){
+      ctx.fillStyle='rgba(255,255,255,.82)';
+      [[0,0,.72],[sc*.9,sc*.15,.57],[-(sc*.7),sc*.2,.47]].forEach(([dx,dy,rf])=>{
+        ctx.beginPath();ctx.arc(cx+dx,cy+dy,sc*rf,0,Math.PI*2);ctx.fill();
+      });
+    }
+    cloud((W*.22+animT*9)%(W+100)-50,H*.09,15);
+    cloud((W*.62+animT*6)%(W+100)-50,H*.06,10);
+    cloud((W*.45+animT*7)%(W+100)-50,H*.12,9);
+
+    /* 바다 */
+    ctx.save();ctx.beginPath();ctx.moveTo(0,wL);
+    for(let x=0;x<=W;x+=2)
+      ctx.lineTo(x,wL+Math.sin(x*.038+animT)*3.5+Math.sin(x*.072-animT*1.4)*2.2);
+    ctx.lineTo(W,gL);ctx.lineTo(0,gL);ctx.closePath();
+    const seaG=ctx.createLinearGradient(0,wL,0,gL);
+    seaG.addColorStop(0,'#1565C0');seaG.addColorStop(1,'#0D47A1');
+    ctx.fillStyle=seaG;ctx.fill();ctx.restore();
+
+    for(let i=0;i<3;i++){
+      ctx.beginPath();
+      for(let x=0;x<=W;x+=3){
+        const y=wL+Math.sin(x*.032+animT+i*1.6)*3.2+i*2.2;
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.strokeStyle=`rgba(255,255,255,${.28-i*.08})`;ctx.lineWidth=1.4;ctx.stroke();
+    }
+
+    bubbles.forEach(b=>{
+      b.y-=b.spd;if(b.y<wL)b.y=gL+Math.random()*(H-gL)*.8;
+      ctx.beginPath();ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(255,255,255,${b.op})`;ctx.lineWidth=1;ctx.stroke();
+    });
+
+    /* 지하 */
+    const gndG=ctx.createLinearGradient(0,gL,0,H);
+    gndG.addColorStop(0,'#5D4037');gndG.addColorStop(1,'#3E2723');
+    ctx.fillStyle=gndG;ctx.fillRect(0,gL,W,H-gL);
+    ctx.fillStyle='rgba(0,0,0,.12)';
+    [.12,.28,.44,.58,.73,.88].forEach((rx,i)=>{
+      ctx.beginPath();ctx.ellipse(W*rx,gL+12+(i%2)*8,22+i*3,9,(i*.15),0,Math.PI*2);ctx.fill();
+    });
+
+    /* 터널 배경 */
+    const tBg=ctx.createLinearGradient(0,tCY-tR,0,tCY+tR);
+    tBg.addColorStop(0,'#111827');tBg.addColorStop(.5,'#162130');tBg.addColorStop(1,'#0d1520');
+    ctx.fillStyle=tBg;ctx.fillRect(lW,tCY-tR,W-lW*2,tR*2);
+
+    /* 천장 조명 */
+    const nL=Math.max(6,Math.floor(W/55));
+    for(let i=0;i<=nL;i++){
+      const lx=lW+(W-lW*2)/nL*i,fl=.6+.4*Math.sin(animT*3.5+i*.8);
+      ctx.fillStyle=`rgba(255,255,200,${fl*.65})`;
+      ctx.beginPath();ctx.arc(lx,tCY-tR+6,2.5,0,Math.PI*2);ctx.fill();
+      const lg=ctx.createRadialGradient(lx,tCY-tR+6,0,lx,tCY-tR+6,18);
+      lg.addColorStop(0,`rgba(255,255,170,${fl*.18})`);lg.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=lg;ctx.beginPath();ctx.arc(lx,tCY-tR+6,18,0,Math.PI*2);ctx.fill();
+    }
+
+    /* 선로 */
+    const r1=tCY+tR*.28,r2=tCY+tR*.52;
+    ctx.strokeStyle='#888';ctx.lineWidth=2;
+    [r1,r2].forEach(ry=>{ctx.beginPath();ctx.moveTo(lW,ry);ctx.lineTo(W-lW,ry);ctx.stroke();});
+    const nSL=Math.floor(W/22);
+    for(let i=0;i<=nSL;i++){
+      const sx=lW+(W-lW*2)/nSL*i;
+      ctx.fillStyle='#5D4037';ctx.fillRect(sx-2,r1-2,4,r2-r1+4);
+    }
+
+    /* 기차 */
+    const tW2=Math.min(132,W*.16),tH2=tR*1.12,tY2=tCY-tH2*.46;
+    if(trainX>-tW2-60&&trainX<W+60){
+      const bG=ctx.createLinearGradient(trainX,tY2,trainX,tY2+tH2*.65);
+      bG.addColorStop(0,'#E8ECEF');bG.addColorStop(.3,'#FFFFFF');bG.addColorStop(1,'#B0BEC5');
+      ctx.fillStyle=bG;rrect(trainX,tY2,tW2,tH2*.65,8);ctx.fill();
+      ctx.fillStyle='#1565C0';ctx.fillRect(trainX,tY2+tH2*.16,tW2,tH2*.13);
+      ctx.fillStyle='#1565C0';
+      ctx.beginPath();ctx.moveTo(trainX+tW2,tY2);ctx.lineTo(trainX+tW2+tW2*.22,tY2+tH2*.2);ctx.lineTo(trainX+tW2,tY2+tH2*.65);ctx.fill();
+      ctx.fillStyle='#ECEFF1';
+      ctx.beginPath();ctx.moveTo(trainX+tW2,tY2+5);ctx.lineTo(trainX+tW2+tW2*.17,tY2+tH2*.19);ctx.lineTo(trainX+tW2,tY2+tH2*.6);ctx.fill();
+      ctx.fillStyle='rgba(255,255,200,.92)';
+      ctx.beginPath();ctx.ellipse(trainX+tW2+tW2*.19,tY2+tH2*.22,7,5,0,0,Math.PI*2);ctx.fill();
+      const hG=ctx.createRadialGradient(trainX+tW2+tW2*.19,tY2+tH2*.22,0,trainX+tW2+tW2*.19,tY2+tH2*.22,60);
+      hG.addColorStop(0,'rgba(255,255,190,.35)');hG.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=hG;ctx.beginPath();ctx.ellipse(trainX+tW2+tW2*.35,tY2+tH2*.22,58,22,0,0,Math.PI*2);ctx.fill();
+      const nW=Math.max(3,Math.floor(tW2/28));
+      for(let i=0;i<nW;i++){
+        const wx=trainX+8+i*(tW2-14)/nW;
+        ctx.fillStyle='#90CAF9';rrect(wx,tY2+6,17,11,3);ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,.5)';ctx.fillRect(wx+2,tY2+8,4,2);
+      }
+      ctx.fillStyle='#37474F';ctx.fillRect(trainX+4,tY2+tH2*.65,tW2-4,tH2*.1);
+      [[trainX+tW2*.2,r1],[trainX+tW2*.8,r1]].forEach(([wx,wy])=>{
+        ctx.fillStyle='#263238';ctx.beginPath();ctx.arc(wx,wy,7,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='#546E7A';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(wx,wy,7,0,Math.PI*2);ctx.stroke();
+      });
+    }
+
+    /* 터널 입구 */
+    ['left','right'].forEach(side=>{
+      const ex=side==='left'?lW:W-lW;
+      ctx.fillStyle='#09090f';ctx.beginPath();
+      if(side==='left')ctx.ellipse(ex,tCY,tR*.48,tR,0,Math.PI/2,-Math.PI/2);
+      else ctx.ellipse(ex,tCY,tR*.48,tR,0,-Math.PI/2,Math.PI/2);
+      ctx.fill();
+      ctx.strokeStyle='#8D6E63';ctx.lineWidth=6;ctx.beginPath();
+      if(side==='left')ctx.arc(ex,tCY,tR,-Math.PI/2,Math.PI/2);
+      else ctx.arc(ex,tCY,tR,Math.PI/2,-Math.PI/2);
+      ctx.stroke();
+    });
+
+    /* 육지 */
+    ctx.fillStyle='#388E3C';
+    ctx.fillRect(0,wL+2,lW+10,gL-wL-2);
+    ctx.fillRect(W-lW-10,wL+2,lW+10,gL-wL-2);
+    ctx.fillStyle='#2E7D32';
+    ctx.fillRect(0,wL-10,lW+8,14);
+    ctx.fillRect(W-lW-8,wL-10,lW+8,14);
+
+    /* 레이블 */
+    ctx.shadowColor='rgba(0,0,0,.6)';ctx.shadowBlur=5;
+    ctx.fillStyle='white';ctx.textAlign='center';
+    ctx.font=`bold ${Math.max(11,W*.014)}px sans-serif`;
+    ctx.fillText('영국',lW*.52,H*.17);
+    ctx.fillText('프랑스',W-lW*.52,H*.17);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,255,255,.72)';
+    ctx.font=`${Math.max(10,W*.012)}px sans-serif`;
+    ctx.fillText('영불 해협',W/2,(wL+gL)/2+5);
+    /* ✅ 수정: "약 40m" → "해저 구간 39km" */
+    ctx.fillStyle='rgba(170,210,255,.65)';
+    ctx.font=`${Math.max(9,W*.011)}px sans-serif`;
+    ctx.fillText('채널 터널 (해저 구간 39 km)',W/2,tCY-tR-5);
+
+    trainX+=1.7;
+    if(trainX>W+80)trainX=-tW2-80;
+    requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+/* ══ 공통 유틸 ══ */
+function toggleTip(hdr){
+  const body=hdr.nextElementSibling,arrow=hdr.querySelector('.tip-arrow');
+  const open=body.classList.contains('open');
+  body.classList.toggle('open',!open);arrow.classList.toggle('open',!open);
+}
+function addInput(wrapId){
+  const wrap=document.getElementById(wrapId);
+  const ta=document.createElement('textarea');
+  ta.className='input-area';ta.placeholder='내용을 입력하세요…';
+  wrap.appendChild(ta);ta.focus();
+  ta.scrollIntoView({behavior:'smooth',block:'nearest'});
+  ta.addEventListener('input',scheduleAutoSave);
+}
+function setEval(btn){
+  btn.closest('.eval-btns').querySelectorAll('.eval-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');autoSave();
+}
+let saveTimer;
+function scheduleAutoSave(){clearTimeout(saveTimer);saveTimer=setTimeout(autoSave,1200);}
+function autoSave(){
+  const data={};
+  document.querySelectorAll('textarea').forEach((ta,i)=>{data['ta'+i]=ta.value;});
+  document.querySelectorAll('.eval-btn.on').forEach((b,i)=>{data['ev'+i]=b.textContent;});
+  try{
+    localStorage.setItem('tunnel_act_v3',JSON.stringify(data));
+    const msg=document.getElementById('autosaveMsg');
+    msg.style.opacity='1';setTimeout(()=>{msg.style.opacity='0';},2200);
+  }catch(e){}
+}
+function loadSaved(){
+  try{
+    const raw=localStorage.getItem('tunnel_act_v3');
+    if(!raw)return;
+    const data=JSON.parse(raw);
+    document.querySelectorAll('textarea').forEach((ta,i)=>{if(data['ta'+i])ta.value=data['ta'+i];});
+  }catch(e){}
+}
+document.querySelectorAll('textarea').forEach(ta=>ta.addEventListener('input',scheduleAutoSave));
+setInterval(autoSave,30000);
+window.addEventListener('load',loadSaved);
+</script>
+</body>
+</html>
