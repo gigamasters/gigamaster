@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>재료 슬라이스</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --paper:#F5F0E6;
+    --ink:#2B2420;
+    --wood-deep:#B5651D;
+    --gold:#E8A33D;
+    --red:#D6534A;
+    --line:#DED4C2;
+    --wood:#E3A76F; --wood-b:#B5651D;
+    --metal:#B7CBD7; --metal-b:#4C7893;
+    --plastic:#A9DDBC; --plastic-b:#3E8E5C;
+    --glass:#BFE6EC; --glass-b:#2E92A3;
+    --rubber:#CBC2D6; --rubber-b:#6A5B87;
+    --stone:#D9CBB8; --stone-b:#8A7355;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;min-height:100%;
+    background:
+      radial-gradient(circle at 15% 8%, rgba(181,101,29,0.06), transparent 40%),
+      radial-gradient(circle at 85% 92%, rgba(76,120,147,0.07), transparent 45%),
+      var(--paper);
+    font-family:'Pretendard', -apple-system, sans-serif;
+    color:var(--ink);
+    -webkit-user-select:none; user-select:none;
+  }
+  .wrap{ max-width:420px; margin:0 auto; padding:16px 14px 26px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .title .eyebrow{ font-size:10.5px; letter-spacing:0.14em; color:var(--wood-deep); font-weight:700; margin-bottom:2px; }
+  .title h1{ font-size:20px; margin:0; font-weight:800; letter-spacing:-0.02em; }
+  .stats{ display:flex; gap:8px; align-items:center; }
+  .stat{ background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:5px 10px; text-align:center; min-width:50px; }
+  .stat .num{ font-size:16px; font-weight:800; }
+  .stat .lbl{ font-size:9px; color:#8a7f6f; font-weight:600; }
+  .lives{ font-size:16px; letter-spacing:2px; }
+
+  .target-banner{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    background:#fffdf8; border:2px solid var(--ink); border-radius:14px;
+    padding:8px 10px; margin-bottom:10px; box-shadow:3px 3px 0 var(--ink);
+    font-weight:800; font-size:14px;
+  }
+  .target-banner .ticon{ font-size:22px; }
+
+  .game-area{
+    position:relative; width:100%; height:480px; overflow:hidden;
+    background:linear-gradient(180deg,#fbf7ee,#efe6d3);
+    border:2.5px solid var(--ink); border-radius:18px; box-shadow:4px 4px 0 var(--ink);
+    touch-action:none;
+  }
+  canvas.trail{ position:absolute; inset:0; width:100%; height:100%; }
+  .fruit{
+    position:absolute; width:52px; height:52px; margin-left:-26px; margin-top:-26px;
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:26px; border:2.5px solid var(--ink); box-shadow:2px 2px 0 rgba(0,0,0,0.25);
+    will-change:transform;
+  }
+  .fruit.wood{ background:var(--wood); border-color:var(--wood-b); }
+  .fruit.metal{ background:var(--metal); border-color:var(--metal-b); }
+  .fruit.plastic{ background:var(--plastic); border-color:var(--plastic-b); }
+  .fruit.glass{ background:var(--glass); border-color:var(--glass-b); }
+  .fruit.rubber{ background:var(--rubber); border-color:var(--rubber-b); }
+  .fruit.stone{ background:var(--stone); border-color:var(--stone-b); }
+
+  .half{
+    position:absolute; width:26px; height:52px; overflow:hidden; pointer-events:none;
+  }
+  .half .inner{ width:52px; height:52px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:26px; border:2.5px solid var(--ink); }
+  .half.left{ }
+  .half.left .inner{ margin-left:0; }
+  .half.right .inner{ margin-left:-26px; }
+
+  .popscore{
+    position:absolute; font-weight:900; font-size:18px; pointer-events:none;
+    animation:popUp 0.7s ease-out forwards; text-shadow:1px 1px 0 #fff;
+  }
+  @keyframes popUp{ 0%{opacity:0; transform:translateY(0) scale(0.7);} 20%{opacity:1; transform:translateY(-6px) scale(1.1);} 100%{opacity:0; transform:translateY(-38px) scale(1);} }
+
+  .flash{ position:absolute; inset:0; background:var(--red); opacity:0; pointer-events:none; }
+  .flash.hit{ animation:flashHit 0.3s ease-out; }
+  @keyframes flashHit{ 0%{opacity:0.55;} 100%{opacity:0;} }
+
+  .hint{ font-size:11px; color:#9a8f7d; margin-top:12px; text-align:center; line-height:1.7; }
+
+  .overlay{ position:fixed; inset:0; background:rgba(43,36,32,0.72); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+  .overlay.hidden{ display:none; }
+  .panel{ background:var(--paper); border:2.5px solid var(--ink); border-radius:20px; padding:26px 24px; max-width:360px; width:100%; text-align:center; box-shadow:6px 6px 0 var(--ink); }
+  .panel h2{ margin:0 0 6px; font-size:22px; font-weight:800; }
+  .panel p{ margin:0 0 16px; color:#6b6154; font-size:12.5px; line-height:1.6; }
+  .panel .big{ font-size:40px; font-weight:900; margin:6px 0; color:var(--wood-deep); }
+  .btn{ background:var(--ink); color:var(--paper); border:none; border-radius:12px; padding:12px 22px; font-size:15px; font-weight:700; cursor:pointer; box-shadow:3px 3px 0 var(--wood-deep); }
+  .btn:active{ transform:translateY(2px); box-shadow:1px 1px 0 var(--wood-deep); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="title">
+      <div class="eyebrow">재료의 특성과 가공 · 미니게임</div>
+      <h1>재료 슬라이스</h1>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="num" id="scoreNum">0</div><div class="lbl">점수</div></div>
+      <div class="stat"><div class="lives" id="livesEl">❤️❤️❤️</div><div class="lbl">생명</div></div>
+    </div>
+  </div>
+
+  <div class="target-banner"><span class="ticon" id="targetIcon">🪵</span><span id="targetText">목재만 잘라 주세요!</span></div>
+
+  <div class="game-area" id="gameArea">
+    <canvas class="trail" id="trailCanvas"></canvas>
+    <div class="flash" id="flash"></div>
+  </div>
+  <div class="hint">손가락(또는 마우스)으로 화면을 그어서 목표 재료만 잘라 보세요.<br>다른 재료를 자르면 생명이 줄어들어요!</div>
+</div>
+
+<div class="overlay" id="startOverlay">
+  <div class="panel">
+    <h2>재료 슬라이스 🔪</h2>
+    <p>화면 위로 재료가 튀어 올라요.<br>위쪽 배너에 나온 <b>목표 재료만</b> 슬라이스하세요.<br>다른 재료를 자르면 생명이 하나 줄어요. 생명 3개!</p>
+    <button class="btn" id="startBtn">게임 시작</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="endOverlay">
+  <div class="panel">
+    <h2>게임 오버!</h2>
+    <div class="big" id="finalScore">0</div>
+    <p id="finalMsg">수고했어요!</p>
+    <button class="btn" id="restartBtn">다시 하기</button>
+  </div>
+</div>
+
+<script>
+const MATS = {
+  wood:{icon:'🪵', name:'목재'},
+  metal:{icon:'⚙️', name:'금속'},
+  plastic:{icon:'🧴', name:'플라스틱'},
+  glass:{icon:'🥛', name:'유리'},
+  rubber:{icon:'⚫', name:'고무'},
+  stone:{icon:'🪨', name:'흙/돌'},
+};
+const CATS = Object.keys(MATS);
+
+const gameArea = document.getElementById('gameArea');
+const trailCanvas = document.getElementById('trailCanvas');
+const ctx = trailCanvas.getContext && trailCanvas.getContext('2d');
+const flashEl = document.getElementById('flash');
+const scoreNum = document.getElementById('scoreNum');
+const livesEl = document.getElementById('livesEl');
+const targetIcon = document.getElementById('targetIcon');
+const targetText = document.getElementById('targetText');
+const startOverlay = document.getElementById('startOverlay');
+const endOverlay = document.getElementById('endOverlay');
+
+let AREA_W = 0, AREA_H = 0;
+function resizeCanvas(){
+  AREA_W = gameArea.clientWidth;
+  AREA_H = gameArea.clientHeight;
+  if(trailCanvas){
+    trailCanvas.width = AREA_W;
+    trailCanvas.height = AREA_H;
+  }
+}
+window.addEventListener('resize', resizeCanvas);
+
+let items = [];
+let score = 0, lives = 3;
+let target = CATS[0];
+let playing = false;
+let spawnTimer = 0, spawnInterval = 1.0; // seconds
+let elapsed = 0;
+let lastTs = null;
+let rafId = null;
+let targetIntervalId = null;
+let idCounter = 0;
+
+const GRAVITY = 1400; // px/s^2
+
+function pickNewTarget(){
+  let next = target;
+  while(next === target) next = CATS[Math.floor(Math.random()*CATS.length)];
+  target = next;
+  const m = MATS[target];
+  targetIcon.textContent = m.icon;
+  targetText.textContent = m.name + '만 잘라 주세요!';
+}
+
+function spawnItem(){
+  const cat = CATS[Math.floor(Math.random()*CATS.length)];
+  const x = 40 + Math.random()*(AREA_W-80);
+  const peakHeight = AREA_H*0.55 + Math.random()*AREA_H*0.3;
+  const vy0 = -Math.sqrt(2*GRAVITY*peakHeight);
+  const vx = (Math.random()-0.5) * 60;
+  const el = document.createElement('div');
+  el.className = 'fruit ' + cat;
+  el.textContent = MATS[cat].icon;
+  gameArea.appendChild(el);
+  items.push({
+    id: idCounter++,
+    cat, el,
+    x, y: AREA_H + 30,
+    vx, vy: vy0,
+    r: 26,
+    sliced: false,
+    prevX: x, prevY: AREA_H+30
+  });
+}
+
+function popScoreText(x,y,text,color){
+  const p = document.createElement('div');
+  p.className = 'popscore';
+  p.textContent = text;
+  p.style.left = x+'px'; p.style.top = y+'px';
+  p.style.color = color || 'var(--ink)';
+  gameArea.appendChild(p);
+  setTimeout(()=>p.remove(), 700);
+}
+
+function sliceItem(it, correct){
+  it.sliced = true;
+  const x = it.x, y = it.y;
+  // split halves visual
+  ['left','right'].forEach(side=>{
+    const h = document.createElement('div');
+    h.className = 'half ' + side;
+    h.style.left = (side==='left' ? x-26 : x) + 'px';
+    h.style.top = (y-26) + 'px';
+    const inner = document.createElement('div');
+    inner.className = 'inner ' + it.cat;
+    inner.textContent = MATS[it.cat].icon;
+    h.appendChild(inner);
+    gameArea.appendChild(h);
+    const dx = side==='left' ? -40 : 40;
+    let t=0;
+    const anim = setInterval(()=>{
+      t+=16;
+      h.style.transform = 'translate('+(dx*t/300)+'px,'+(t*0.4)+'px) rotate('+(side==='left'?-40:40)*(t/300)+'deg)';
+      h.style.opacity = String(1 - t/300);
+      if(t>=300){ clearInterval(anim); h.remove(); }
+    },16);
+  });
+  it.el.remove();
+  if(correct){
+    score += 10;
+    popScoreText(x-10,y-10,'+10','#3E8E5C');
+  } else {
+    score = Math.max(0, score-5);
+    lives -= 1;
+    popScoreText(x-14,y-10,'-생명','var(--red)');
+    flashEl.classList.remove('hit'); void flashEl.offsetWidth; flashEl.classList.add('hit');
+    renderLives();
+    if(lives<=0){
+      endGame();
+    }
+  }
+  scoreNum.textContent = score;
+}
+
+function renderLives(){
+  livesEl.textContent = '❤️'.repeat(Math.max(lives,0)) + '🖤'.repeat(Math.max(3-lives,0));
+}
+
+// pointer trail + collision
+let trailPoints = [];
+let dragging = false;
+
+function pointToSegDist(px,py,x1,y1,x2,y2){
+  const dx=x2-x1, dy=y2-y1;
+  const lenSq = dx*dx+dy*dy;
+  let t = lenSq===0 ? 0 : ((px-x1)*dx+(py-y1)*dy)/lenSq;
+  t = Math.max(0, Math.min(1,t));
+  const cx = x1+t*dx, cy = y1+t*dy;
+  return Math.hypot(px-cx, py-cy);
+}
+
+function getLocalPos(e){
+  const rect = gameArea.getBoundingClientRect();
+  return { x: e.clientX-rect.left, y: e.clientY-rect.top };
+}
+
+gameArea.addEventListener('pointerdown', (e)=>{
+  if(!playing) return;
+  dragging = true;
+  const p = getLocalPos(e);
+  trailPoints.push({x:p.x,y:p.y,t:performance.now()});
+});
+gameArea.addEventListener('pointermove', (e)=>{
+  if(!playing || !dragging) return;
+  const p = getLocalPos(e);
+  const prev = trailPoints[trailPoints.length-1];
+  trailPoints.push({x:p.x,y:p.y,t:performance.now()});
+  if(trailPoints.length>16) trailPoints.shift();
+  if(prev){
+    items.forEach(it=>{
+      if(it.sliced) return;
+      const d = pointToSegDist(it.x,it.y, prev.x,prev.y, p.x,p.y);
+      if(d < it.r+6){
+        sliceItem(it, it.cat===target);
+      }
+    });
+  }
+});
+function endDrag(){ dragging = false; }
+gameArea.addEventListener('pointerup', endDrag);
+gameArea.addEventListener('pointerleave', endDrag);
+
+function drawTrail(){
+  if(!ctx) return;
+  ctx.clearRect(0,0,AREA_W,AREA_H);
+  const now = performance.now();
+  trailPoints = trailPoints.filter(p=> now-p.t < 220);
+  if(trailPoints.length<2) return;
+  ctx.lineCap='round'; ctx.lineJoin='round';
+  for(let i=1;i<trailPoints.length;i++){
+    const a = trailPoints[i-1], b = trailPoints[i];
+    const age = (now-b.t)/220;
+    ctx.strokeStyle = 'rgba(43,36,32,'+(0.55*(1-age))+')';
+    ctx.lineWidth = 7*(1-age)+2;
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y);
+    ctx.lineTo(b.x,b.y);
+    ctx.stroke();
+  }
+}
+
+function loop(ts){
+  if(!playing) return;
+  if(lastTs===null) lastTs = ts;
+  const dt = Math.min((ts-lastTs)/1000, 0.05);
+  lastTs = ts;
+  elapsed += dt;
+
+  // difficulty ramp
+  spawnInterval = Math.max(0.45, 1.0 - elapsed*0.01);
+  spawnTimer += dt;
+  if(spawnTimer >= spawnInterval){
+    spawnTimer = 0;
+    spawnItem();
+  }
+
+  items.forEach(it=>{
+    if(it.sliced) return;
+    it.prevX = it.x; it.prevY = it.y;
+    it.vy += GRAVITY*dt;
+    it.x += it.vx*dt;
+    it.y += it.vy*dt;
+    it.el.style.transform = 'translate('+it.x+'px,'+it.y+'px) rotate('+(it.x*0.5)+'deg)';
+  });
+
+  // remove offscreen
+  items = items.filter(it=>{
+    if(it.sliced) return false;
+    if(it.y > AREA_H+60 || it.x < -60 || it.x > AREA_W+60){
+      it.el.remove();
+      return false;
+    }
+    return true;
+  });
+
+  drawTrail();
+  rafId = requestAnimationFrame(loop);
+}
+
+function startGame(){
+  items.forEach(it=>it.el.remove());
+  items = [];
+  score = 0; lives = 3; elapsed = 0; spawnTimer = 0; lastTs = null;
+  scoreNum.textContent = '0';
+  renderLives();
+  resizeCanvas();
+  target = CATS[Math.floor(Math.random()*CATS.length)];
+  targetIcon.textContent = MATS[target].icon;
+  targetText.textContent = MATS[target].name + '만 잘라 주세요!';
+  startOverlay.classList.add('hidden');
+  endOverlay.classList.add('hidden');
+  playing = true;
+  clearInterval(targetIntervalId);
+  targetIntervalId = setInterval(pickNewTarget, 9000);
+  cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(loop);
+}
+
+function endGame(){
+  playing = false;
+  cancelAnimationFrame(rafId);
+  clearInterval(targetIntervalId);
+  document.getElementById('finalScore').textContent = score;
+  let msg = '다음엔 더 정확하게 슬라이스해봐요!';
+  if(score>=300) msg = '재료 감별의 달인이네요! 🏆';
+  else if(score>=150) msg = '훌륭해요! 눈썰미가 좋아요.';
+  document.getElementById('finalMsg').textContent = msg;
+  endOverlay.classList.remove('hidden');
+}
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+
+resizeCanvas();
+renderLives();
+</script>
+</body>
+</html>

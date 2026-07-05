@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>재료 스무고개</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --paper:#F5F0E6; --ink:#2B2420; --wood-deep:#B5651D; --gold:#E8A33D;
+    --red:#D6534A; --green:#3E8E5C; --line:#DED4C2;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;min-height:100%;
+    background:
+      radial-gradient(circle at 15% 8%, rgba(181,101,29,0.06), transparent 40%),
+      radial-gradient(circle at 85% 92%, rgba(76,120,147,0.07), transparent 45%),
+      var(--paper);
+    font-family:'Pretendard', -apple-system, sans-serif; color:var(--ink);
+    -webkit-user-select:none; user-select:none;
+  }
+  .wrap{ max-width:460px; margin:0 auto; padding:16px 14px 30px; }
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+  .title .eyebrow{ font-size:10.5px; letter-spacing:0.14em; color:var(--wood-deep); font-weight:700; margin-bottom:2px; }
+  .title h1{ font-size:20px; margin:0; font-weight:800; letter-spacing:-0.02em; }
+  .stats{ display:flex; gap:8px; }
+  .stat{ background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:5px 10px; text-align:center; min-width:52px; }
+  .stat .num{ font-size:16px; font-weight:800; }
+  .stat .lbl{ font-size:9px; color:#8a7f6f; font-weight:600; }
+
+  .qbudget{ display:flex; align-items:center; gap:6px; margin-bottom:10px; font-size:12px; font-weight:700; color:#6b6154; }
+  .qbudget .bar{ flex:1; height:8px; border-radius:6px; background:#e5dccb; border:1px solid var(--line); overflow:hidden; }
+  .qbudget .fill{ height:100%; background:linear-gradient(90deg,var(--gold),var(--wood-deep)); transition:width 0.2s; }
+
+  .transcript{
+    background:#fffdf8; border:2px solid var(--ink); border-radius:14px;
+    padding:10px 12px; height:150px; overflow-y:auto; margin-bottom:12px;
+    box-shadow:2px 2px 0 var(--ink); font-size:12.5px; line-height:1.7;
+  }
+  .transcript .row{ display:flex; justify-content:space-between; gap:8px; padding:3px 0; border-bottom:1px dashed var(--line); }
+  .transcript .row:last-child{ border-bottom:none; }
+  .transcript .q{ flex:1; }
+  .transcript .a{ font-weight:800; }
+  .transcript .a.yes{ color:var(--green); }
+  .transcript .a.no{ color:var(--red); }
+  .transcript .empty{ color:#a0967f; text-align:center; padding-top:14px; }
+
+  .section-lbl{ font-size:11px; font-weight:800; color:#6b6154; margin-bottom:8px; }
+  .qgrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px; }
+  .qbtn{
+    background:#fff; border:2px solid var(--ink); border-radius:12px; padding:9px 10px;
+    font-size:12px; font-weight:700; text-align:left; cursor:pointer; box-shadow:2px 2px 0 var(--ink);
+  }
+  .qbtn:active{ transform:translateY(1px); box-shadow:1px 1px 0 var(--ink); }
+  .qbtn:disabled{ opacity:0.32; cursor:default; }
+
+  .guess-row{ display:flex; gap:8px; }
+  select{
+    flex:1; padding:10px; border-radius:12px; border:2px solid var(--ink); font-size:13px;
+    font-family:'Pretendard', sans-serif; font-weight:700; background:#fff;
+  }
+  .btn{ background:var(--ink); color:var(--paper); border:none; border-radius:12px; padding:10px 18px; font-size:13px; font-weight:700; cursor:pointer; box-shadow:3px 3px 0 var(--wood-deep); }
+  .btn:active{ transform:translateY(2px); box-shadow:1px 1px 0 var(--wood-deep); }
+  .btn.ghost{ background:#fff; color:var(--ink); box-shadow:3px 3px 0 var(--ink); }
+
+  .feedback{ text-align:center; font-size:12.5px; font-weight:700; margin-top:10px; min-height:18px; }
+  .feedback.wrong{ color:var(--red); }
+  .feedback.info{ color:#6b6154; }
+
+  .overlay{ position:fixed; inset:0; background:rgba(43,36,32,0.72); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+  .overlay.hidden{ display:none; }
+  .panel{ background:var(--paper); border:2.5px solid var(--ink); border-radius:20px; padding:26px 24px; max-width:380px; width:100%; text-align:center; box-shadow:6px 6px 0 var(--ink); }
+  .panel h2{ margin:0 0 8px; font-size:22px; font-weight:800; }
+  .panel .resulticon{ font-size:46px; margin:6px 0; }
+  .panel p{ margin:0 0 16px; color:#6b6154; font-size:13px; line-height:1.65; }
+  .panel .big{ font-size:40px; font-weight:900; margin:6px 0; color:var(--wood-deep); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="title">
+      <div class="eyebrow">재료의 특성과 가공 · 미니게임</div>
+      <h1>🕵️ 재료 스무고개</h1>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="num" id="scoreNum">0</div><div class="lbl">점수</div></div>
+      <div class="stat"><div class="num" id="roundNum">1/5</div><div class="lbl">라운드</div></div>
+    </div>
+  </div>
+
+  <div class="qbudget">남은 질문 <span id="budgetNum">20</span>개
+    <div class="bar"><div class="fill" id="budgetFill"></div></div>
+  </div>
+
+  <div class="section-lbl">🗒️ 조사 기록</div>
+  <div class="transcript" id="transcript"><div class="empty">아직 질문한 내용이 없어요.</div></div>
+
+  <div class="section-lbl">❓ 질문 목록 (탭해서 예/아니오로 확인)</div>
+  <div class="qgrid" id="qgrid"></div>
+
+  <div class="section-lbl">💡 이 재료가 뭔지 알 것 같다면?</div>
+  <div class="guess-row">
+    <select id="guessSelect"></select>
+    <button class="btn" id="guessBtn">추리하기</button>
+  </div>
+  <div class="feedback" id="feedback"></div>
+</div>
+
+<div class="overlay" id="startOverlay">
+  <div class="panel">
+    <h2>재료 스무고개 🕵️</h2>
+    <p>제가 재료 하나를 마음속으로 정했어요.<br>예/아니오 질문으로 힌트를 모아서<br>어떤 재료인지 추리해 보세요! 질문은 20개까지,<br>질문을 적게 쓸수록 점수가 높아요.</p>
+    <button class="btn" id="startBtn">시작하기</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="roundEndOverlay">
+  <div class="panel">
+    <h2 id="roundEndTitle">정답!</h2>
+    <div class="resulticon" id="roundEndIcon">🎉</div>
+    <p id="roundEndMsg"></p>
+    <button class="btn" id="nextRoundBtn">다음 라운드</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="endOverlay">
+  <div class="panel">
+    <h2>탐정 게임 완료!</h2>
+    <div class="big" id="finalScore">0</div>
+    <p id="finalMsg">수고했어요!</p>
+    <button class="btn" id="restartBtn">처음부터 다시</button>
+  </div>
+</div>
+
+<script>
+const MATERIALS = [
+  {name:'목재', icon:'🪵', fact:'나무를 자르고 가공하여 만든 재료로, 무늬가 아름답고 불에 타기 쉬워요.',
+    props:{elec:false, heat:false, rust:false, burns:true, light:true, transparent:false, alloy:false, plastic:false, metal:false, wood:true, elastic:false, softpure:false}},
+  {name:'순철', icon:'⛓️', fact:'탄소가 거의 없는 철로, 재질이 연하고 전기가 잘 통해 실험용 재료로 쓰여요.',
+    props:{elec:true, heat:true, rust:true, burns:false, light:false, transparent:false, alloy:false, plastic:false, metal:true, wood:false, elastic:false, softpure:true}},
+  {name:'탄소강', icon:'🔩', fact:'탄소 함량 0.03~2%인 철로, 가공성과 강도가 우수해 기계 부품에 쓰여요.',
+    props:{elec:true, heat:true, rust:true, burns:false, light:false, transparent:false, alloy:false, plastic:false, metal:true, wood:false, elastic:false, softpure:false}},
+  {name:'스테인리스강', icon:'🍳', fact:'탄소강에 크로뮴·니켈을 더해 녹이 잘 슬지 않는 합금이에요.',
+    props:{elec:true, heat:true, rust:false, burns:false, light:false, transparent:false, alloy:true, plastic:false, metal:true, wood:false, elastic:false, softpure:false}},
+  {name:'구리', icon:'🟠', fact:'전기와 열이 잘 통하고 녹이 잘 슬지 않으며 전성·연성이 뛰어나요.',
+    props:{elec:true, heat:true, rust:false, burns:false, light:false, transparent:false, alloy:false, plastic:false, metal:true, wood:false, elastic:false, softpure:false}},
+  {name:'알루미늄', icon:'🥫', fact:'가볍고 전기가 잘 통하며 공기 중에서 녹이 잘 슬지 않아요.',
+    props:{elec:true, heat:true, rust:false, burns:false, light:true, transparent:false, alloy:false, plastic:false, metal:true, wood:false, elastic:false, softpure:false}},
+  {name:'청동', icon:'🔔', fact:'구리에 주석을 더한 합금으로 경도가 높고 마모에 강해요.',
+    props:{elec:true, heat:true, rust:false, burns:false, light:false, transparent:false, alloy:true, plastic:false, metal:true, wood:false, elastic:false, softpure:false}},
+  {name:'두랄루민', icon:'✈️', fact:'알루미늄에 구리·마그네슘을 더한 합금으로 가볍고 강도가 뛰어나요.',
+    props:{elec:true, heat:true, rust:false, burns:false, light:true, transparent:false, alloy:true, plastic:false, metal:true, wood:false, elastic:false, softpure:false}},
+  {name:'PET(페트)', icon:'🧴', fact:'투명하고 가벼우며 독성에 안전해서 음료수병에 많이 쓰여요.',
+    props:{elec:false, heat:false, rust:false, burns:false, light:true, transparent:true, alloy:false, plastic:true, metal:false, wood:false, elastic:false, softpure:false}},
+  {name:'PVC', icon:'🚰', fact:'내구성과 내부식성이 뛰어나 상하수도관이나 절연체로 쓰여요.',
+    props:{elec:false, heat:false, rust:false, burns:false, light:false, transparent:false, alloy:false, plastic:true, metal:false, wood:false, elastic:false, softpure:false}},
+  {name:'유리', icon:'🥛', fact:'투명하고 단단하지만 잘 깨지는 성질이 있어요.',
+    props:{elec:false, heat:false, rust:false, burns:false, light:false, transparent:true, alloy:false, plastic:false, metal:false, wood:false, elastic:false, softpure:false}},
+  {name:'고무', icon:'⚫', fact:'탄성이 뛰어나 잘 늘어나고 다시 돌아오는 성질이 있어요.',
+    props:{elec:false, heat:false, rust:false, burns:false, light:true, transparent:false, alloy:false, plastic:false, metal:false, wood:false, elastic:true, softpure:false}},
+];
+
+const QUESTIONS = [
+  {key:'elec', text:'⚡ 전기가 잘 통하나요?'},
+  {key:'heat', text:'🔥 열이 잘 전달되나요?'},
+  {key:'rust', text:'💧 녹이 슬 수 있나요?'},
+  {key:'burns', text:'🔥 불에 잘 타나요?'},
+  {key:'light', text:'🪶 비교적 가벼운가요?'},
+  {key:'transparent', text:'👀 투명한가요?'},
+  {key:'alloy', text:'🧪 두 가지 이상을 섞어 만든 합금인가요?'},
+  {key:'plastic', text:'🧴 플라스틱류인가요?'},
+  {key:'metal', text:'⚙️ 금속류인가요?'},
+  {key:'wood', text:'🪵 나무로 만든 재료인가요?'},
+  {key:'elastic', text:'🔗 잘 늘어나고 탄성이 있나요?'},
+  {key:'softpure', text:'🔩 아주 부드러운 순수 금속인가요?'},
+];
+
+const MAX_ROUNDS = 5;
+const MAX_QUESTIONS = 20;
+
+let round = 1;
+let score = 0;
+let secret = null;
+let usedQ = 0;
+let askedKeys = new Set();
+
+const scoreNum = document.getElementById('scoreNum');
+const roundNum = document.getElementById('roundNum');
+const budgetNum = document.getElementById('budgetNum');
+const budgetFill = document.getElementById('budgetFill');
+const transcriptEl = document.getElementById('transcript');
+const qgridEl = document.getElementById('qgrid');
+const guessSelect = document.getElementById('guessSelect');
+const feedbackEl = document.getElementById('feedback');
+const startOverlay = document.getElementById('startOverlay');
+const roundEndOverlay = document.getElementById('roundEndOverlay');
+const endOverlay = document.getElementById('endOverlay');
+
+function renderQuestions(){
+  qgridEl.innerHTML = '';
+  QUESTIONS.forEach(q=>{
+    const btn = document.createElement('button');
+    btn.className = 'qbtn';
+    btn.textContent = q.text;
+    btn.disabled = askedKeys.has(q.key) || usedQ >= MAX_QUESTIONS;
+    btn.addEventListener('click', ()=> askQuestion(q));
+    qgridEl.appendChild(btn);
+  });
+}
+
+function renderGuessSelect(){
+  guessSelect.innerHTML = '<option value="">재료 선택...</option>';
+  MATERIALS.forEach(m=>{
+    const opt = document.createElement('option');
+    opt.value = m.name;
+    opt.textContent = m.icon + ' ' + m.name;
+    guessSelect.appendChild(opt);
+  });
+}
+
+function renderBudget(){
+  const left = MAX_QUESTIONS - usedQ;
+  budgetNum.textContent = left;
+  budgetFill.style.width = (left/MAX_QUESTIONS*100)+'%';
+}
+
+function renderTranscript(){
+  if(usedQ === 0){
+    transcriptEl.innerHTML = '<div class="empty">아직 질문한 내용이 없어요.</div>';
+    return;
+  }
+}
+
+function addTranscriptRow(text, answer){
+  if(transcriptEl.querySelector('.empty')) transcriptEl.innerHTML = '';
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = '<span class="q">'+text+'</span><span class="a '+(answer?'yes':'no')+'">'+(answer?'예':'아니오')+'</span>';
+  transcriptEl.appendChild(row);
+  transcriptEl.scrollTop = transcriptEl.scrollHeight;
+}
+
+function askQuestion(q){
+  if(askedKeys.has(q.key) || usedQ >= MAX_QUESTIONS) return;
+  askedKeys.add(q.key);
+  usedQ++;
+  const answer = !!secret.props[q.key];
+  addTranscriptRow(q.text, answer);
+  renderBudget();
+  renderQuestions();
+  feedbackEl.textContent = '';
+  if(usedQ >= MAX_QUESTIONS){
+    endRound(false);
+  }
+}
+
+function startRound(){
+  secret = MATERIALS[Math.floor(Math.random()*MATERIALS.length)];
+  usedQ = 0;
+  askedKeys = new Set();
+  guessSelect.value = '';
+  feedbackEl.textContent = '';
+  roundNum.textContent = round + '/' + MAX_ROUNDS;
+  renderBudget();
+  renderQuestions();
+  renderGuessSelect();
+  renderTranscript();
+}
+
+function makeGuess(){
+  const val = guessSelect.value;
+  if(!val){
+    feedbackEl.textContent = '먼저 재료를 선택해 주세요.';
+    feedbackEl.className = 'feedback info';
+    return;
+  }
+  usedQ++;
+  renderBudget();
+  if(val === secret.name){
+    endRound(true);
+  } else {
+    feedbackEl.textContent = '"'+val+'"은(는) 아니에요. 다른 질문으로 더 좁혀 보세요.';
+    feedbackEl.className = 'feedback wrong';
+    renderQuestions();
+    if(usedQ >= MAX_QUESTIONS){
+      endRound(false);
+    }
+  }
+}
+
+function endRound(success){
+  const left = Math.max(0, MAX_QUESTIONS - usedQ);
+  let gained = 0;
+  if(success){
+    gained = 40 + left*8;
+  }
+  score += gained;
+  scoreNum.textContent = score;
+
+  document.getElementById('roundEndTitle').textContent = success ? '정답입니다! 🎉' : '아쉬워요!';
+  document.getElementById('roundEndIcon').textContent = secret.icon;
+  const base = success
+    ? '정답은 "'+secret.name+'" 이었어요. '+secret.fact+' (+'+gained+'점)'
+    : '정답은 "'+secret.name+'" 이었어요. '+secret.fact+' (+0점)';
+  document.getElementById('roundEndMsg').textContent = base;
+  roundEndOverlay.classList.remove('hidden');
+}
+
+function nextRound(){
+  roundEndOverlay.classList.add('hidden');
+  round++;
+  if(round > MAX_ROUNDS){
+    document.getElementById('finalScore').textContent = score;
+    let msg = '수고했어요! 재료 탐정 훈련을 마쳤어요.';
+    if(score >= 400) msg = '완벽해요! 진짜 재료 탐정이네요 🕵️‍♀️';
+    else if(score >= 220) msg = '훌륭해요! 추리력이 좋아요.';
+    document.getElementById('finalMsg').textContent = msg;
+    endOverlay.classList.remove('hidden');
+    return;
+  }
+  startRound();
+}
+
+function startGame(){
+  round = 1; score = 0;
+  scoreNum.textContent = '0';
+  startOverlay.classList.add('hidden');
+  endOverlay.classList.add('hidden');
+  startRound();
+}
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('guessBtn').addEventListener('click', makeGuess);
+document.getElementById('nextRoundBtn').addEventListener('click', nextRound);
+document.getElementById('restartBtn').addEventListener('click', startGame);
+
+renderGuessSelect();
+renderQuestions();
+renderBudget();
+</script>
+</body>
+</html>

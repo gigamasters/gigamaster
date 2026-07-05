@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>재료 설계 스튜디오</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --bg0:#0B0F1C;
+    --bg1:#131A2E;
+    --bg2:#1B2440;
+    --glass:rgba(255,255,255,0.055);
+    --glass-strong:rgba(255,255,255,0.09);
+    --stroke:rgba(255,255,255,0.12);
+    --stroke-soft:rgba(255,255,255,0.07);
+    --text:#EAF0FF;
+    --text-dim:#93A0C0;
+    --text-faint:#5E6B8C;
+    --cyan:#3EE0C4;
+    --cyan-deep:#17B79A;
+    --violet:#8B7CF6;
+    --amber:#FFC061;
+    --rose:#FF7A93;
+    --ok:#3EE0C4;
+    --bad:#FF7A93;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{ margin:0; padding:0; min-height:100%; }
+  body{
+    font-family:'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 600px at 12% -8%, rgba(139,124,246,0.18), transparent 55%),
+      radial-gradient(1000px 500px at 100% 0%, rgba(62,224,196,0.13), transparent 50%),
+      radial-gradient(800px 700px at 50% 120%, rgba(255,192,97,0.08), transparent 55%),
+      linear-gradient(180deg, var(--bg0), var(--bg1) 60%, var(--bg2));
+    background-attachment:fixed;
+    -webkit-user-select:none; user-select:none;
+    min-height:100vh;
+  }
+  .wrap{ max-width:520px; margin:0 auto; padding:22px 16px 40px; }
+
+  /* header */
+  .head{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:18px; }
+  .brand .kicker{
+    font-size:11px; letter-spacing:0.22em; text-transform:uppercase;
+    color:var(--cyan); font-weight:700; margin-bottom:6px;
+    display:flex; align-items:center; gap:7px;
+  }
+  .brand .kicker::before{ content:""; width:16px; height:2px; background:var(--cyan); border-radius:2px; display:inline-block; }
+  .brand h1{ margin:0; font-size:25px; font-weight:800; letter-spacing:-0.02em; line-height:1.05; }
+  .brand h1 .light{ color:var(--text-dim); font-weight:500; }
+  .score-pod{
+    text-align:right; background:var(--glass); border:1px solid var(--stroke);
+    border-radius:16px; padding:9px 15px; backdrop-filter:blur(12px);
+    min-width:96px;
+  }
+  .score-pod .val{ font-size:24px; font-weight:800; letter-spacing:-0.02em;
+    background:linear-gradient(120deg,var(--cyan),var(--violet)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .score-pod .cap{ font-size:10px; letter-spacing:0.14em; text-transform:uppercase; color:var(--text-faint); font-weight:700; }
+
+  /* progress rail */
+  .rail{ display:flex; gap:5px; margin-bottom:22px; }
+  .rail .seg{ flex:1; height:4px; border-radius:3px; background:rgba(255,255,255,0.08); overflow:hidden; position:relative; }
+  .rail .seg.done{ background:linear-gradient(90deg,var(--cyan-deep),var(--cyan)); }
+  .rail .seg.now{ background:rgba(255,255,255,0.14); }
+  .rail .seg.now::after{ content:""; position:absolute; inset:0; width:45%;
+    background:linear-gradient(90deg,var(--violet),var(--cyan)); border-radius:3px; animation:railPulse 1.6s ease-in-out infinite; }
+  @keyframes railPulse{ 0%,100%{opacity:0.5;} 50%{opacity:1;} }
+
+  /* brief card */
+  .brief{
+    position:relative; border-radius:22px; padding:20px 20px 18px;
+    background:linear-gradient(155deg, rgba(139,124,246,0.16), rgba(62,224,196,0.06) 70%);
+    border:1px solid var(--stroke); backdrop-filter:blur(16px);
+    margin-bottom:20px; overflow:hidden;
+  }
+  .brief::before{
+    content:""; position:absolute; top:-40px; right:-30px; width:150px; height:150px;
+    background:radial-gradient(circle, rgba(62,224,196,0.28), transparent 70%); pointer-events:none;
+  }
+  .brief .row1{ display:flex; align-items:center; gap:10px; margin-bottom:12px; position:relative; }
+  .brief .idx{
+    font-size:12px; font-weight:800; letter-spacing:0.1em; color:var(--bg0);
+    background:var(--cyan); border-radius:8px; padding:3px 9px;
+  }
+  .brief .tag{ font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--text-dim); font-weight:700; }
+  .brief h2{ margin:0 0 15px; font-size:19px; font-weight:800; line-height:1.35; letter-spacing:-0.01em; position:relative; }
+  .brief .need-lbl{ font-size:10.5px; letter-spacing:0.16em; text-transform:uppercase; color:var(--text-faint); font-weight:700; margin-bottom:9px; }
+  .conds{ display:flex; flex-wrap:wrap; gap:8px; position:relative; }
+  .cond{
+    display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:700;
+    padding:7px 12px; border-radius:11px; background:rgba(255,255,255,0.07);
+    border:1px solid var(--stroke); color:var(--text);
+    transition:all 0.25s;
+  }
+  .cond .dot{ width:6px; height:6px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+  .cond.miss{ background:rgba(255,122,147,0.14); border-color:rgba(255,122,147,0.5); color:#FFD0D8; }
+  .cond.miss .dot{ background:var(--rose); box-shadow:0 0 8px var(--rose); }
+
+  /* materials grid */
+  .section-lbl{ font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:var(--text-faint); font-weight:700; margin:0 0 12px 2px; display:flex; justify-content:space-between; align-items:center; }
+  .grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:11px; margin-bottom:22px; }
+  .mat{
+    position:relative; text-align:left; cursor:pointer;
+    border-radius:18px; padding:15px 15px 13px;
+    background:var(--glass); border:1px solid var(--stroke-soft);
+    backdrop-filter:blur(10px); transition:transform 0.14s ease, border-color 0.2s, background 0.2s;
+    overflow:hidden;
+  }
+  .mat:hover{ transform:translateY(-2px); border-color:var(--stroke); background:var(--glass-strong); }
+  .mat .mrow{ display:flex; align-items:center; gap:9px; margin-bottom:9px; }
+  .mat .emoji{ font-size:26px; line-height:1; }
+  .mat .mname{ font-size:15.5px; font-weight:800; letter-spacing:-0.01em; }
+  .mat .props{ display:flex; flex-wrap:wrap; gap:5px; }
+  .mat .p{ font-size:10px; font-weight:600; color:var(--text-dim); background:rgba(255,255,255,0.06); border-radius:7px; padding:3px 7px; }
+  .mat.picked{ border-color:var(--cyan); background:rgba(62,224,196,0.10); box-shadow:0 0 0 1px var(--cyan), 0 8px 30px -12px rgba(62,224,196,0.7); }
+  .mat.picked::after{
+    content:"✓"; position:absolute; top:11px; right:12px; width:22px; height:22px; border-radius:50%;
+    background:var(--cyan); color:var(--bg0); font-size:13px; font-weight:900;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .mat.correct-reveal{ border-color:var(--cyan); box-shadow:0 0 0 1px var(--cyan); }
+  .mat.wrong-reveal{ border-color:var(--rose); box-shadow:0 0 0 1px var(--rose); animation:matShake 0.4s; }
+  @keyframes matShake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+  .mat.dim{ opacity:0.4; }
+
+  /* footer actions */
+  .foot{ display:flex; gap:10px; }
+  .btn{
+    flex:1; border:none; border-radius:15px; padding:15px; font-size:15px; font-weight:800;
+    font-family:inherit; cursor:pointer; letter-spacing:-0.01em; transition:transform 0.1s, filter 0.2s;
+  }
+  .btn:active{ transform:translateY(2px); }
+  .btn.primary{ color:var(--bg0); background:linear-gradient(120deg,var(--cyan),#5FE8D0);
+    box-shadow:0 10px 30px -10px rgba(62,224,196,0.8); }
+  .btn.primary:disabled{ filter:grayscale(0.7) brightness(0.7); cursor:default; box-shadow:none; }
+  .btn.ghost{ flex:0 0 auto; padding:15px 18px; color:var(--text-dim); background:var(--glass);
+    border:1px solid var(--stroke); }
+
+  .feedback{ text-align:center; font-size:13px; font-weight:600; margin-top:14px; min-height:20px; line-height:1.5; color:var(--text-dim); }
+  .feedback.bad{ color:#FFB4C0; }
+  .feedback.good{ color:var(--cyan); }
+
+  /* overlays */
+  .overlay{ position:fixed; inset:0; background:rgba(6,9,18,0.78); backdrop-filter:blur(8px);
+    display:flex; align-items:center; justify-content:center; z-index:100; padding:22px; }
+  .overlay.hidden{ display:none; }
+  .modal{
+    max-width:400px; width:100%; text-align:center; border-radius:26px; padding:34px 28px;
+    background:linear-gradient(160deg, rgba(27,36,64,0.95), rgba(11,15,28,0.95));
+    border:1px solid var(--stroke); box-shadow:0 30px 80px -20px rgba(0,0,0,0.8);
+  }
+  .modal .glyph{ font-size:52px; margin-bottom:10px; }
+  .modal h2{ margin:0 0 10px; font-size:24px; font-weight:800; letter-spacing:-0.02em; }
+  .modal h2.grad{ background:linear-gradient(120deg,var(--cyan),var(--violet)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .modal p{ margin:0 0 22px; font-size:13.5px; line-height:1.7; color:var(--text-dim); }
+  .modal p b{ color:var(--text); }
+  .modal .bignum{ font-size:52px; font-weight:900; letter-spacing:-0.03em;
+    background:linear-gradient(120deg,var(--cyan),var(--violet)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; margin:4px 0 2px; }
+  .modal .btn{ width:100%; }
+  .factbox{ background:var(--glass); border:1px solid var(--stroke-soft); border-radius:14px;
+    padding:13px 15px; font-size:13px; line-height:1.6; color:var(--text-dim); margin-bottom:22px; text-align:left; }
+  .factbox b{ color:var(--cyan); }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation:none !important; transition:none !important; }
+  }
+  @media (max-width:380px){
+    .grid{ grid-template-columns:1fr; }
+    .brand h1{ font-size:22px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="brand">
+      <div class="kicker">재료의 특성과 가공</div>
+      <h1>재료 설계 <span class="light">스튜디오</span></h1>
+    </div>
+    <div class="score-pod">
+      <div class="val" id="scoreVal">0</div>
+      <div class="cap" id="roundCap">Round 1 / 10</div>
+    </div>
+  </div>
+
+  <div class="rail" id="rail"></div>
+
+  <div class="brief">
+    <div class="row1">
+      <span class="idx" id="briefIdx">01</span>
+      <span class="tag">Design Brief</span>
+    </div>
+    <h2 id="briefText">—</h2>
+    <div class="need-lbl">필수 조건</div>
+    <div class="conds" id="conds"></div>
+  </div>
+
+  <div class="section-lbl"><span>재료 후보</span><span id="pickHint">하나를 선택하세요</span></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="foot">
+    <button class="btn ghost" id="hintBtn">💡 힌트</button>
+    <button class="btn primary" id="submitBtn" disabled>이 재료로 결정</button>
+  </div>
+  <div class="feedback" id="feedback"></div>
+</div>
+
+<!-- start -->
+<div class="overlay" id="startOverlay">
+  <div class="modal">
+    <div class="glyph">🏭</div>
+    <h2 class="grad">재료 설계 스튜디오</h2>
+    <p>제품 의뢰가 들어왔어요. 각 의뢰에는 <b>동시에 만족해야 할 조건</b>이 붙어 있어요.<br>후보 재료의 특성을 읽고, <b>모든 조건</b>을 만족하는 재료를 골라 설계를 완성하세요.<br>조건을 하나라도 놓치면 설계 실패!</p>
+    <button class="btn primary" id="startBtn">설계 시작</button>
+  </div>
+</div>
+
+<!-- round result -->
+<div class="overlay hidden" id="resultOverlay">
+  <div class="modal">
+    <div class="glyph" id="resGlyph">🎉</div>
+    <h2 id="resTitle">설계 성공!</h2>
+    <div class="factbox" id="resFact"></div>
+    <button class="btn primary" id="nextBtn">다음 의뢰</button>
+  </div>
+</div>
+
+<!-- game end -->
+<div class="overlay hidden" id="endOverlay">
+  <div class="modal">
+    <div class="glyph">🏆</div>
+    <h2>모든 설계 완료</h2>
+    <div class="bignum" id="finalScore">0</div>
+    <p id="finalMsg" style="margin-top:6px;">수고했어요!</p>
+    <button class="btn primary" id="restartBtn">다시 도전</button>
+  </div>
+</div>
+
+<script>
+// ---- property dictionary (label shown on chips) ----
+const PROP_LABEL = {
+  transparent:'투명함', light:'가벼움', superLight:'초경량', nontoxic:'무독성·안전',
+  elecConductor:'전기 잘 통함', elecInsulator:'전기 안 통함', heatConductor:'열 잘 전달',
+  heatInsulator:'단열', corrosionResistant:'녹·부식 안 됨', strong:'강도 높음',
+  elastic:'탄성 있음', waterproof:'물에 안 상함', heatResistant:'열에 강함',
+  hard:'단단함', workable:'가공성 좋음', shockAbsorb:'충격 흡수', soundAbsorb:'방음'
+};
+
+// ---- materials with property sets (only true ones listed) ----
+function M(name, emoji, tags, fact){
+  const props = {};
+  tags.forEach(t=>props[t]=true);
+  return {name, emoji, props, tags, fact};
+}
+const MATERIALS = {
+  '목재':      M('목재','🪵',['light','nontoxic','elecInsulator','heatInsulator','workable'],'나무를 가공한 재료로 가볍고 가공이 쉽지만 물에 썩기 쉬워요.'),
+  'PET':       M('PET','🧴',['transparent','light','nontoxic','corrosionResistant','waterproof','elecInsulator'],'투명하고 가벼우며 독성에 안전해 음료수병에 쓰여요.'),
+  'PVC':       M('PVC','🚰',['light','corrosionResistant','waterproof','elecInsulator','strong'],'내구성·내부식성이 뛰어나 상하수도관이나 절연체에 쓰여요.'),
+  'PS(폴리스티렌)': M('PS(폴리스티렌)','🍱',['light','heatInsulator','workable','waterproof','elecInsulator','shockAbsorb'],'열을 잘 차단하고 가공이 쉬워 일회용 용기·완충재에 쓰여요. 가열하면 유해 물질이 나와요.'),
+  '유리':      M('유리','🥛',['transparent','nontoxic','corrosionResistant','heatResistant','hard'],'투명하고 단단하지만 무겁고 잘 깨져요.'),
+  '스테인리스강': M('스테인리스강','🍳',['heatConductor','corrosionResistant','strong','hard','elecConductor','nontoxic','heatResistant'],'탄소강에 크로뮴·니켈을 더해 녹이 잘 슬지 않는 위생적인 합금이에요.'),
+  '탄소강':    M('탄소강','🔩',['strong','hard','heatConductor','elecConductor','workable'],'강도·경도가 우수하지만 녹이 슬 수 있어요.'),
+  '구리':      M('구리','🟠',['elecConductor','heatConductor','corrosionResistant','workable'],'전기·열이 잘 통하고 전성·연성이 뛰어나 전선에 쓰여요.'),
+  '알루미늄':  M('알루미늄','🥫',['light','elecConductor','heatConductor','corrosionResistant','nontoxic'],'가볍고 전기가 잘 통하며 잘 녹슬지 않아요.'),
+  '두랄루민':  M('두랄루민','✈️',['light','strong','hard','corrosionResistant'],'알루미늄 합금으로 가볍고 강도가 뛰어나 비행기 부품에 쓰여요.'),
+  '탄소섬유강화플라스틱': M('탄소섬유강화플라스틱','🏎️',['light','strong','hard','corrosionResistant'],'탄소 섬유+에폭시 수지로 가벼우면서 금속처럼 단단해요.'),
+  '고무':      M('고무','⚫',['elastic','elecInsulator','waterproof','shockAbsorb','light'],'탄성이 뛰어나고 전기가 통하지 않아요.'),
+  '멜라민수지': M('멜라민수지','🍽️',['waterproof','heatResistant','nontoxic','workable','elecInsulator','hard'],'내수성·내열성이 좋고 착색이 자유로워 식기에 쓰여요.'),
+  '페놀수지':  M('페놀수지','🔌',['strong','heatResistant','elecInsulator','hard'],'기계적 강도·내열성·전기 절연성이 우수해 전기 기구, 회로 기판에 쓰여요.'),
+  '발포알루미늄': M('발포알루미늄','🧊',['light','shockAbsorb','soundAbsorb','heatInsulator'],'알루미늄에 거품처럼 구멍을 낸 신소재로 충격·소리를 잘 흡수해요.'),
+  '에어로겔':  M('에어로겔','☁️',['light','superLight','heatInsulator'],'내부 99%가 공기라 매우 가볍고 단열성이 뛰어난 신소재예요.'),
+  '탄소나노튜브': M('탄소나노튜브','🧬',['elecConductor','heatConductor','strong','light'],'전기·열 전도성이 뛰어나고 잡아당기는 힘에 강한 신소재예요.'),
+};
+
+// ---- 10 missions ----
+const MISSIONS = [
+  { product:'여름에 시원하게 마실 음료수를 담을 병을 설계하세요.',
+    need:['transparent','light','nontoxic'], options:['PET','유리','PVC','알루미늄'] },
+  { product:'가스레인지 위에서 쓸 프라이팬 몸체를 설계하세요.',
+    need:['heatConductor','corrosionResistant','nontoxic','hard'], options:['스테인리스강','알루미늄','탄소강','구리'] },
+  { product:'하늘을 나는 비행기의 동체 부품을 설계하세요.',
+    need:['light','strong'], options:['두랄루민','탄소섬유강화플라스틱','탄소강','유리'] },
+  { product:'땅속에 묻어 오래 쓸 상하수도관을 설계하세요.',
+    need:['corrosionResistant','waterproof','strong'], options:['PVC','PET','고무','목재'] },
+  { product:'집안 곳곳에 전기를 나르는 전선의 도체를 설계하세요.',
+    need:['elecConductor','corrosionResistant','workable'], options:['구리','탄소강','고무','유리'] },
+  { product:'감전을 막아줄 전기 플러그의 절연 몸체를 설계하세요.',
+    need:['elecInsulator','heatResistant','hard'], options:['페놀수지','멜라민수지','고무','구리'] },
+  { product:'충돌 시 승객을 지킬 자동차 범퍼 충격 흡수재를 설계하세요.',
+    need:['shockAbsorb','light','soundAbsorb'], options:['발포알루미늄','고무','PS(폴리스티렌)','유리'] },
+  { product:'열 손실을 막을 우주선 외벽 단열재를 설계하세요.',
+    need:['superLight','heatInsulator'], options:['에어로겔','PS(폴리스티렌)','발포알루미늄','목재'] },
+  { product:'매일 음식을 담을 가벼운 식탁용 식기를 설계하세요.',
+    need:['nontoxic','heatResistant','workable'], options:['멜라민수지','PS(폴리스티렌)','목재','유리'] },
+  { product:'미래 고성능 반도체에 쓸 차세대 소재를 설계하세요.',
+    need:['elecConductor','strong','light'], options:['탄소나노튜브','구리','두랄루민','탄소섬유강화플라스틱'] },
+];
+
+const TOTAL = MISSIONS.length;
+let round = 0, score = 0, picked = null, wrongTries = 0, hintUsed = 0, hintKey = null;
+
+const $ = id => document.getElementById(id);
+const scoreVal=$('scoreVal'), roundCap=$('roundCap'), rail=$('rail'),
+      briefIdx=$('briefIdx'), briefText=$('briefText'), condsEl=$('conds'),
+      grid=$('grid'), feedbackEl=$('feedback'), submitBtn=$('submitBtn'),
+      hintBtn=$('hintBtn'), pickHint=$('pickHint'),
+      startOverlay=$('startOverlay'), resultOverlay=$('resultOverlay'), endOverlay=$('endOverlay');
+
+function satisfies(matName, need){
+  const p = MATERIALS[matName].props;
+  return need.every(k => p[k]);
+}
+function correctSet(m){
+  return m.options.filter(o => satisfies(o, m.need));
+}
+
+function buildRail(){
+  rail.innerHTML='';
+  for(let i=0;i<TOTAL;i++){
+    const s=document.createElement('div');
+    s.className='seg'+(i<round?' done':(i===round?' now':''));
+    rail.appendChild(s);
+  }
+}
+
+function renderRound(){
+  const m = MISSIONS[round];
+  picked=null; wrongTries=0; hintUsed=0; hintKey=null;
+  roundCap.textContent = `Round ${round+1} / ${TOTAL}`;
+  briefIdx.textContent = String(round+1).padStart(2,'0');
+  briefText.textContent = m.product;
+  pickHint.textContent = '하나를 선택하세요';
+  feedbackEl.textContent=''; feedbackEl.className='feedback';
+  submitBtn.disabled = true;
+  buildRail();
+
+  condsEl.innerHTML='';
+  m.need.forEach(k=>{
+    const c=document.createElement('span'); c.className='cond'; c.dataset.key=k;
+    c.innerHTML='<span class="dot"></span>'+PROP_LABEL[k];
+    condsEl.appendChild(c);
+  });
+
+  grid.innerHTML='';
+  m.options.forEach(name=>{
+    const mat=MATERIALS[name];
+    const card=document.createElement('button');
+    card.className='mat'; card.dataset.name=name;
+    const props = mat.tags.slice(0,4).map(t=>'<span class="p">'+PROP_LABEL[t]+'</span>').join('');
+    card.innerHTML =
+      '<div class="mrow"><span class="emoji">'+mat.emoji+'</span><span class="mname">'+name+'</span></div>'+
+      '<div class="props">'+props+'</div>';
+    card.addEventListener('click', ()=>pick(name));
+    grid.appendChild(card);
+  });
+}
+
+function pick(name){
+  picked=name;
+  [...grid.children].forEach(c=> c.classList.toggle('picked', c.dataset.name===name));
+  submitBtn.disabled=false;
+  pickHint.textContent = name+' 선택됨';
+  feedbackEl.textContent=''; feedbackEl.className='feedback';
+  // clear condition-miss highlight
+  [...condsEl.children].forEach(c=>c.classList.remove('miss'));
+}
+
+function submit(){
+  if(!picked) return;
+  const m = MISSIONS[round];
+  const ok = satisfies(picked, m.need);
+  if(ok){
+    let gained = 100 - wrongTries*25 - hintUsed*20;
+    gained = Math.max(gained, 20);
+    score += gained; scoreVal.textContent = score;
+    showResult(true, gained);
+  } else {
+    wrongTries++;
+    const p = MATERIALS[picked].props;
+    const missed = m.need.filter(k=>!p[k]);
+    [...condsEl.children].forEach(c=> c.classList.toggle('miss', missed.includes(c.dataset.key)));
+    const missTxt = missed.map(k=>'"'+PROP_LABEL[k]+'"').join(', ');
+    feedbackEl.innerHTML = `<b>${picked}</b>은(는) ${missTxt} 조건을 만족하지 못해요. 붉게 표시된 조건을 다시 살펴보세요.`;
+    feedbackEl.className='feedback bad';
+    const card=[...grid.children].find(c=>c.dataset.name===picked);
+    card.classList.remove('wrong-reveal'); void card.offsetWidth; card.classList.add('wrong-reveal');
+  }
+}
+
+function showResult(success, gained){
+  const m = MISSIONS[round];
+  const cset = correctSet(m);
+  $('resGlyph').textContent = MATERIALS[picked].emoji;
+  $('resTitle').textContent = '설계 성공!  +'+gained+'점';
+  $('resTitle').className = 'grad';
+  let others = cset.filter(n=>n!==picked);
+  let extra = others.length ? `<br><span style="color:var(--text-faint)">이 조건은 ${others.join(', ')}(으)로도 만들 수 있어요.</span>` : '';
+  $('resFact').innerHTML = `<b>${picked}</b> · ${MATERIALS[picked].fact}${extra}`;
+  resultOverlay.classList.remove('hidden');
+}
+
+function useHint(){
+  const m = MISSIONS[round];
+  // highlight the condition that eliminates the most wrong options
+  const wrongOpts = m.options.filter(o=>!satisfies(o,m.need));
+  let bestKey=m.need[0], bestCount=-1;
+  m.need.forEach(k=>{
+    const cnt = wrongOpts.filter(o=>!MATERIALS[o].props[k]).length;
+    if(cnt>bestCount){ bestCount=cnt; bestKey=k; }
+  });
+  hintUsed = Math.min(hintUsed+1,3);
+  [...condsEl.children].forEach(c=>{
+    if(c.dataset.key===bestKey){ c.style.background='rgba(255,192,97,0.16)'; c.style.borderColor='rgba(255,192,97,0.6)'; c.style.color='#FFE0AE'; }
+  });
+  const survivors = m.options.filter(o=>MATERIALS[o].props[bestKey]);
+  feedbackEl.innerHTML = `💡 <b>"${PROP_LABEL[bestKey]}"</b> 조건을 먼저 따져 보세요. 이 조건만으로도 후보가 ${survivors.length}개로 줄어요. <span style="color:var(--text-faint)">(-20점)</span>`;
+  feedbackEl.className='feedback';
+}
+
+function nextRound(){
+  resultOverlay.classList.add('hidden');
+  round++;
+  if(round>=TOTAL){ endGame(); return; }
+  renderRound();
+}
+
+function endGame(){
+  const maxScore = TOTAL*100;
+  $('finalScore').textContent = score;
+  let msg;
+  if(score>=maxScore*0.9) msg='완벽에 가까워요! 최고의 재료 설계자예요 🏆';
+  else if(score>=maxScore*0.6) msg='훌륭해요! 재료의 특성을 잘 이해하고 있어요.';
+  else msg='좋은 출발이에요. 재료 특성을 더 살펴보고 다시 도전해봐요!';
+  $('finalMsg').textContent = msg + ` (${score} / ${maxScore}점)`;
+  endOverlay.classList.remove('hidden');
+}
+
+function startGame(){
+  round=0; score=0; scoreVal.textContent='0';
+  startOverlay.classList.add('hidden');
+  endOverlay.classList.add('hidden');
+  renderRound();
+}
+
+$('startBtn').addEventListener('click', startGame);
+submitBtn.addEventListener('click', submit);
+hintBtn.addEventListener('click', useHint);
+$('nextBtn').addEventListener('click', nextRound);
+$('restartBtn').addEventListener('click', startGame);
+
+buildRail();
+renderRound();
+</script>
+</body>
+</html>
