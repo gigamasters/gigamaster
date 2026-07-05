@@ -1,0 +1,452 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>재료 매치 크러시</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --paper:#F7F2E8; --ink:#2B2420; --wood-deep:#B5651D; --gold:#E8A33D; --line:#DED4C2;
+    --wood:#F3DCB6;    --wood-b:#B5651D;
+    --metal:#D4E4EE;   --metal-b:#3E7CA0;
+    --plastic:#CFEFD9; --plastic-b:#33A05F;
+    --glass:#CCEEF4;   --glass-b:#2494A6;
+    --rubber:#DAD3E6;  --rubber-b:#6A5B87;
+    --stone:#E4D8C4;   --stone-b:#8A7355;
+    --tsize:54px;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;min-height:100%;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(181,101,29,0.06), transparent 42%),
+      radial-gradient(circle at 88% 92%, rgba(62,124,160,0.08), transparent 46%),
+      var(--paper);
+    font-family:'Pretendard', -apple-system, sans-serif; color:var(--ink);
+    -webkit-user-select:none; user-select:none;
+  }
+  .wrap{ max-width:440px; margin:0 auto; padding:16px 14px 26px; }
+
+  /* ---------- game header ---------- */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .title .eyebrow{ font-size:10.5px; letter-spacing:0.14em; color:var(--wood-deep); font-weight:700; margin-bottom:2px; display:flex; align-items:center; gap:6px;}
+  .mode-pill{ background:var(--ink); color:var(--paper); border-radius:20px; padding:1px 8px; font-size:9.5px; letter-spacing:0.06em; }
+  .title h1{ font-size:20px; margin:0; font-weight:800; letter-spacing:-0.02em; }
+  .stats{ display:flex; gap:8px; }
+  .stat{ background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:5px 11px; text-align:center; min-width:52px; }
+  .stat .num{ font-size:17px; font-weight:800; }
+  .stat .lbl{ font-size:9.5px; color:#8a7f6f; font-weight:600; }
+
+  .timerbar{ height:9px; border-radius:6px; background:#e7ddca; overflow:hidden; margin-bottom:12px; border:1px solid var(--line); }
+  .timerbar-fill{ height:100%; width:100%; background:linear-gradient(90deg,var(--gold),var(--wood-deep)); transition:width 0.2s linear; }
+
+  .legend{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin-bottom:12px; }
+  .legend .lg{ display:flex; align-items:center; gap:4px; font-size:11.5px; font-weight:800; padding:3px 9px 3px 6px; border-radius:20px; border:2px solid var(--ink); }
+  .legend .lg .sw{ font-size:14px; }
+  .legend .lg.wood{ background:var(--wood); border-color:var(--wood-b); }
+  .legend .lg.metal{ background:var(--metal); border-color:var(--metal-b); }
+  .legend .lg.plastic{ background:var(--plastic); border-color:var(--plastic-b); }
+  .legend .lg.glass{ background:var(--glass); border-color:var(--glass-b); }
+  .legend .lg.rubber{ background:var(--rubber); border-color:var(--rubber-b); }
+  .legend .lg.stone{ background:var(--stone); border-color:var(--stone-b); }
+
+  .board-wrap{ position:relative; display:flex; justify-content:center; }
+  .board{ display:grid; gap:6px; background:#fffdf8; border:2.5px solid var(--ink); border-radius:18px; padding:9px; box-shadow:4px 4px 0 var(--ink); position:relative; }
+  .tile{
+    width:var(--tsize); height:var(--tsize); border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:calc(var(--tsize) * 0.56); line-height:1; border:2.5px solid var(--ink);
+    cursor:pointer; touch-action:none; position:relative; transition:transform 0.1s;
+    text-shadow:0 1px 0 rgba(255,255,255,0.6);
+  }
+  .tile.wood{ background:var(--wood); border-color:var(--wood-b); }
+  .tile.metal{ background:var(--metal); border-color:var(--metal-b); }
+  .tile.plastic{ background:var(--plastic); border-color:var(--plastic-b); }
+  .tile.glass{ background:var(--glass); border-color:var(--glass-b); }
+  .tile.rubber{ background:var(--rubber); border-color:var(--rubber-b); }
+  .tile.stone{ background:var(--stone); border-color:var(--stone-b); }
+  .tile.selected{ transform:scale(0.86); outline:3px dashed var(--ink); outline-offset:2px; z-index:5; }
+  .tile.pop{ animation:pop 0.16s ease-out; }
+  @keyframes pop{ from{ transform:scale(0.2); opacity:0.1; } to{ transform:scale(1); opacity:1; } }
+  .tile.clearing{ animation:clear 0.22s ease-in forwards; }
+  @keyframes clear{ 30%{ transform:scale(1.18); } 100%{ transform:scale(0.1) rotate(25deg); opacity:0; } }
+  .tile.shake{ animation:shake 0.3s; }
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+  .tile.hint-shake{ animation:hintShake 0.7s ease-in-out; box-shadow:0 0 0 3px var(--gold); z-index:6; }
+  @keyframes hintShake{
+    0%,100%{ transform:rotate(0deg) scale(1); }
+    15%{ transform:rotate(-9deg) scale(1.05); }
+    30%{ transform:rotate(8deg) scale(1.05); }
+    45%{ transform:rotate(-7deg) scale(1.05); }
+    60%{ transform:rotate(6deg) scale(1.05); }
+    75%{ transform:rotate(-3deg) scale(1.02); }
+  }
+
+  .toast{ position:absolute; left:50%; top:40%; transform:translate(-50%,-50%); font-size:27px; font-weight:900; color:var(--wood-deep); text-shadow:2px 2px 0 #fff, 0 0 12px rgba(255,255,255,0.8); pointer-events:none; animation:toastUp 0.9s ease-out forwards; z-index:50; white-space:nowrap; }
+  @keyframes toastUp{ 0%{ opacity:0; transform:translate(-50%,-30%) scale(0.6); } 20%{ opacity:1; transform:translate(-50%,-60%) scale(1.15); } 100%{ opacity:0; transform:translate(-50%,-110%) scale(1); } }
+
+  .foot-hint{ font-size:11px; color:#9a8f7d; margin-top:12px; text-align:center; line-height:1.7; }
+
+  /* ---------- overlays ---------- */
+  .overlay{ position:fixed; inset:0; background:rgba(43,36,32,0.72); display:flex; align-items:center; justify-content:center; z-index:1000; padding:20px; }
+  .overlay.hidden{ display:none; }
+  .panel{ background:var(--paper); border:2.5px solid var(--ink); border-radius:20px; padding:26px 24px; max-width:380px; width:100%; text-align:center; box-shadow:6px 6px 0 var(--ink); }
+  .panel h2{ margin:0 0 6px; font-size:23px; font-weight:800; }
+  .panel .sub{ margin:0 0 18px; color:#6b6154; font-size:12.5px; line-height:1.6; }
+  .panel .big{ font-size:42px; font-weight:900; margin:6px 0; color:var(--wood-deep); }
+  .btn{ background:var(--ink); color:var(--paper); border:none; border-radius:12px; padding:12px 22px; font-size:15px; font-weight:700; cursor:pointer; box-shadow:3px 3px 0 var(--wood-deep); font-family:inherit; }
+  .btn:active{ transform:translateY(2px); box-shadow:1px 1px 0 var(--wood-deep); }
+  .btn.ghost{ background:#fff; color:var(--ink); box-shadow:3px 3px 0 var(--ink); }
+  .btn-row{ display:flex; gap:8px; }
+  .btn-row .btn{ flex:1; }
+
+  /* ---------- mode select landing ---------- */
+  #modeOverlay .panel{ max-width:420px; }
+  .home-logo{ font-size:40px; margin-bottom:4px; }
+  .home-title{ font-size:26px; font-weight:800; letter-spacing:-0.02em; margin:0 0 4px; }
+  .home-tag{ font-size:12px; color:#8a7f6f; font-weight:600; margin:0 0 20px; letter-spacing:0.02em; }
+  .modes{ display:flex; flex-direction:column; gap:12px; }
+  .mode-card{
+    text-align:left; cursor:pointer; border:2.5px solid var(--ink); border-radius:16px;
+    padding:15px 16px; background:#fff; box-shadow:3px 3px 0 var(--ink); transition:transform 0.1s;
+    position:relative; overflow:hidden;
+  }
+  .mode-card:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 var(--ink); }
+  .mode-card .mc-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .mode-card .mc-name{ font-size:17px; font-weight:800; display:flex; align-items:center; gap:8px; }
+  .mode-card .mc-name .tagpill{ font-size:10px; font-weight:800; color:#fff; border-radius:20px; padding:2px 9px; letter-spacing:0.04em; }
+  .mode-card.beginner .tagpill{ background:var(--metal-b); }
+  .mode-card.advanced .tagpill{ background:var(--wood-deep); }
+  .mode-card .stars{ font-size:13px; letter-spacing:2px; }
+  .mode-card .mc-desc{ font-size:12px; color:#6b6154; line-height:1.55; margin-bottom:10px; }
+  .mode-card .mc-icons{ display:flex; gap:5px; flex-wrap:wrap; }
+  .mode-card .mc-icons .ic{ width:34px; height:34px; border-radius:9px; border:2px solid var(--ink); display:flex; align-items:center; justify-content:center; font-size:18px; }
+  .mode-card .go{ position:absolute; right:14px; bottom:14px; font-size:20px; font-weight:900; color:var(--wood-deep); }
+
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="gameWrap" style="display:none;">
+  <div class="topbar">
+    <div class="title">
+      <div class="eyebrow">재료의 특성과 가공 · 미니게임 <span class="mode-pill" id="modePill">입문</span></div>
+      <h1>재료 매치 크러시</h1>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="num" id="scoreNum">0</div><div class="lbl">점수</div></div>
+      <div class="stat"><div class="num" id="comboNum">0</div><div class="lbl">최고콤보</div></div>
+    </div>
+  </div>
+  <div class="timerbar"><div class="timerbar-fill" id="timerFill"></div></div>
+  <div class="legend" id="legend"></div>
+  <div class="board-wrap"><div class="board" id="board"></div></div>
+  <div class="foot-hint" id="footHint"></div>
+</div>
+
+<!-- ===== MODE SELECT (main page) ===== -->
+<div class="overlay" id="modeOverlay">
+  <div class="panel">
+    <div class="home-logo">🏭</div>
+    <h1 class="home-title">재료 매치 크러시</h1>
+    <p class="home-tag">플레이할 난이도를 골라보세요</p>
+    <div class="modes">
+      <button class="mode-card beginner" id="pickBeginner">
+        <div class="mc-top">
+          <div class="mc-name">입문 <span class="tagpill">EASY</span></div>
+          <div class="stars">★☆☆</div>
+        </div>
+        <div class="mc-desc">재료마다 아이콘이 <b>딱 하나</b>. 같은 그림 3개를 이으면 터져요. 6가지 재료로 시작하기 좋아요.</div>
+        <div class="mc-icons">
+          <div class="ic" style="background:var(--wood)">🪵</div>
+          <div class="ic" style="background:var(--metal)">⚙️</div>
+          <div class="ic" style="background:var(--plastic)">🧴</div>
+          <div class="ic" style="background:var(--glass)">🥛</div>
+          <div class="ic" style="background:var(--rubber)">⚫</div>
+          <div class="ic" style="background:var(--stone)">🪨</div>
+        </div>
+        <div class="go">›</div>
+      </button>
+
+      <button class="mode-card advanced" id="pickAdvanced">
+        <div class="mc-top">
+          <div class="mc-name">실전 <span class="tagpill">HARD</span></div>
+          <div class="stars">★★★</div>
+        </div>
+        <div class="mc-desc">재료마다 아이콘이 <b>여러 개</b>! 그림이 달라도 <b>같은 재료면 매치</b>돼요. 머릿속으로 재료를 묶어야 해서 더 어려워요.</div>
+        <div class="mc-icons">
+          <div class="ic" style="background:var(--wood)">🪵</div>
+          <div class="ic" style="background:var(--wood)">📰</div>
+          <div class="ic" style="background:var(--wood)">📦</div>
+          <div class="ic" style="background:var(--metal)">🔩</div>
+          <div class="ic" style="background:var(--metal)">🗝️</div>
+          <div class="ic" style="background:var(--plastic)">💳</div>
+        </div>
+        <div class="go">›</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== END ===== -->
+<div class="overlay hidden" id="endOverlay">
+  <div class="panel">
+    <h2>타임 오버!</h2>
+    <div class="big" id="finalScore">0</div>
+    <p class="sub" id="finalMsg">수고했어요!</p>
+    <div class="btn-row">
+      <button class="btn ghost" id="changeModeBtn">모드 선택</button>
+      <button class="btn" id="restartBtn">다시 하기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- mode configs ----------
+const MODES = {
+  beginner: {
+    label:'입문', cols:7, rows:7, time:60, tile:46,
+    hint:'같은 재료(=같은 그림) 3개를 가로·세로로 맞추면 터져요. 타일을 스와이프하거나 탭 → 옆 타일 탭으로 바꿔요.',
+    materials:{
+      wood:{name:'목재', icons:['🪵']},
+      metal:{name:'금속', icons:['⚙️']},
+      plastic:{name:'플라스틱', icons:['🧴']},
+      glass:{name:'유리', icons:['🥛']},
+      rubber:{name:'고무', icons:['⚫']},
+      stone:{name:'흙/돌', icons:['🪨']},
+    }
+  },
+  advanced: {
+    label:'실전', cols:6, rows:7, time:60, tile:54, idleHint:true, idleDelay:4000,
+    hint:'아이콘이 달라도 <b>같은 재료</b> 3개면 함께 터져요! (🪵 📰 📦 = 모두 목재)<br>잠시 가만히 있으면 힌트 타일이 반짝여요.',
+    materials:{
+      wood:{name:'목재', icons:['🪵','📃','📰','📦']},
+      metal:{name:'금속', icons:['🔩','⚙️','🔧','🔗','🗝️']},
+      plastic:{name:'플라스틱', icons:['🧴','💳','♟️','🔌']},
+      glass:{name:'유리', icons:['🥛','🪟','🔍']},
+    }
+  }
+};
+
+// ---------- state ----------
+let CFG=null, MATERIALS=null, MATS=[], ROWS=7, COLS=7;
+let grid=[], score=0, bestCombo=0, timeLeft=60, totalTime=60;
+let timerId=null, playing=false, busy=false, selected=null, dragStart=null;
+let currentMode='beginner';
+let idleTimer=null;
+
+const $ = id=>document.getElementById(id);
+const gameWrap=$('gameWrap'), boardEl=$('board'), scoreNum=$('scoreNum'), comboNum=$('comboNum'),
+  timerFill=$('timerFill'), legendEl=$('legend'), footHint=$('footHint'), modePill=$('modePill'),
+  modeOverlay=$('modeOverlay'), endOverlay=$('endOverlay');
+
+function randMat(){ return MATS[Math.floor(Math.random()*MATS.length)]; }
+function randIcon(m){ const ic=MATERIALS[m].icons; return ic[Math.floor(Math.random()*ic.length)]; }
+function makeCell(m){ m=m||randMat(); return {m, ic:randIcon(m)}; }
+function matAt(g,r,c){ return g[r][c]?g[r][c].m:null; }
+
+function makeBoardNoMatches(){
+  const g=[];
+  for(let r=0;r<ROWS;r++){ g.push([]);
+    for(let c=0;c<COLS;c++){
+      let m,tries=0;
+      do{ m=randMat(); tries++; }
+      while(tries<25 && ( (c>=2&&g[r][c-1].m===m&&g[r][c-2].m===m) || (r>=2&&g[r-1][c].m===m&&g[r-2][c].m===m) ));
+      g[r].push(makeCell(m));
+    }
+  }
+  return g;
+}
+function cellId(r,c){ return `cell-${r}-${c}`; }
+
+function render(popSet){
+  boardEl.innerHTML='';
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    const cell=grid[r][c];
+    const el=document.createElement('div');
+    el.className='tile '+(cell?cell.m:'');
+    el.id=cellId(r,c); el.textContent=cell?cell.ic:'';
+    el.dataset.r=r; el.dataset.c=c;
+    if(popSet&&popSet.has(r+'_'+c)) el.classList.add('pop');
+    if(selected&&selected.r===r&&selected.c===c) el.classList.add('selected');
+    attachTileEvents(el);
+    boardEl.appendChild(el);
+  }
+}
+
+function findMatches(g){
+  const matched=new Set();
+  for(let r=0;r<ROWS;r++){ let start=0;
+    for(let c=1;c<=COLS;c++){ const same=c<COLS&&matAt(g,r,c)&&matAt(g,r,c)===matAt(g,r,start);
+      if(!same){ if(c-start>=3) for(let k=start;k<c;k++) matched.add(r+'_'+k); start=c; } } }
+  for(let c=0;c<COLS;c++){ let start=0;
+    for(let r=1;r<=ROWS;r++){ const same=r<ROWS&&matAt(g,r,c)&&matAt(g,r,c)===matAt(g,start,c);
+      if(!same){ if(r-start>=3) for(let k=start;k<r;k++) matched.add(k+'_'+c); start=r; } } }
+  return matched;
+}
+function applyGravityAndFill(g){
+  for(let c=0;c<COLS;c++){
+    const stack=[]; for(let r=0;r<ROWS;r++) if(g[r][c]) stack.push(g[r][c]);
+    const missing=ROWS-stack.length; const filled=[];
+    for(let i=0;i<missing;i++) filled.push(makeCell());
+    const col=filled.concat(stack);
+    for(let r=0;r<ROWS;r++) g[r][c]=col[r];
+  }
+}
+function showToast(text){ const t=document.createElement('div'); t.className='toast'; t.textContent=text; document.querySelector('.board-wrap').appendChild(t); setTimeout(()=>t.remove(),900); }
+function hasPossibleMove(g){
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(c<COLS-1){ const g2=g.map(x=>x.slice()); [g2[r][c],g2[r][c+1]]=[g2[r][c+1],g2[r][c]]; if(findMatches(g2).size>0) return true; }
+    if(r<ROWS-1){ const g2=g.map(x=>x.slice()); [g2[r][c],g2[r+1][c]]=[g2[r+1][c],g2[r][c]]; if(findMatches(g2).size>0) return true; }
+  }
+  return false;
+}
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+async function resolveBoard(){
+  busy=true; let combo=0;
+  while(true){
+    const matched=findMatches(grid);
+    if(matched.size===0) break;
+    combo++; if(combo>bestCombo){ bestCombo=combo; comboNum.textContent=bestCombo; }
+    const gained=matched.size*10*combo; score+=gained; scoreNum.textContent=score;
+    showToast('+'+gained+(combo>1?' 콤보x'+combo:''));
+    matched.forEach(k=>{ const [r,c]=k.split('_').map(Number); const el=document.getElementById(cellId(r,c)); if(el) el.classList.add('clearing'); });
+    await sleep(200);
+    matched.forEach(k=>{ const [r,c]=k.split('_').map(Number); grid[r][c]=null; });
+    applyGravityAndFill(grid); render(new Set([...matched])); await sleep(150);
+  }
+  if(!hasPossibleMove(grid)){ grid=makeBoardNoMatches(); render(); showToast('재배치!'); await sleep(300); }
+  busy=false;
+}
+function findHintMove(g){
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+    if(c<COLS-1){ const g2=g.map(x=>x.slice()); [g2[r][c],g2[r][c+1]]=[g2[r][c+1],g2[r][c]];
+      if(findMatches(g2).size>0) return {a:{r,c}, b:{r,c:c+1}}; }
+    if(r<ROWS-1){ const g2=g.map(x=>x.slice()); [g2[r][c],g2[r+1][c]]=[g2[r+1][c],g2[r][c]];
+      if(findMatches(g2).size>0) return {a:{r,c}, b:{r:r+1,c}}; }
+  }
+  return null;
+}
+function clearHintVisual(){
+  document.querySelectorAll('.tile.hint-shake').forEach(el=>el.classList.remove('hint-shake'));
+}
+function clearIdleTimer(){
+  if(idleTimer){ clearTimeout(idleTimer); idleTimer=null; }
+  clearHintVisual();
+}
+function scheduleIdleHint(){
+  clearIdleTimer();
+  if(!playing || !CFG || !CFG.idleHint) return;
+  idleTimer=setTimeout(triggerIdleHint, CFG.idleDelay || 4000);
+}
+function triggerIdleHint(){
+  if(!playing || busy){ scheduleIdleHint(); return; }
+  const pair=findHintMove(grid);
+  if(pair){
+    [pair.a,pair.b].forEach(p=>{
+      const el=document.getElementById(cellId(p.r,p.c));
+      if(el){ el.classList.remove('hint-shake'); void el.offsetWidth; el.classList.add('hint-shake'); }
+    });
+  }
+  idleTimer=setTimeout(triggerIdleHint, CFG.idleDelay || 4000);
+}
+function isAdjacent(a,b){ return (Math.abs(a.r-b.r)===1&&a.c===b.c)||(Math.abs(a.c-b.c)===1&&a.r===b.r); }
+async function trySwap(a,b){
+  if(busy||!playing) return; busy=true; clearIdleTimer();
+  [grid[a.r][a.c],grid[b.r][b.c]]=[grid[b.r][b.c],grid[a.r][a.c]]; render(); await sleep(110);
+  if(findMatches(grid).size===0){
+    [grid[a.r][a.c],grid[b.r][b.c]]=[grid[b.r][b.c],grid[a.r][a.c]]; render();
+    [a,b].forEach(p=>{ const el=document.getElementById(cellId(p.r,p.c)); if(el) el.classList.add('shake'); }); busy=false;
+  } else { render(); await resolveBoard(); busy=false; }
+  scheduleIdleHint();
+}
+function attachTileEvents(el){
+  el.addEventListener('pointerdown',(e)=>{ if(!playing||busy) return; clearIdleTimer(); dragStart={r:+el.dataset.r,c:+el.dataset.c,x:e.clientX,y:e.clientY}; });
+  el.addEventListener('pointerup',(e)=>{
+    if(!playing||busy||!dragStart) return;
+    const dx=e.clientX-dragStart.x, dy=e.clientY-dragStart.y, dist=Math.hypot(dx,dy);
+    const from={r:dragStart.r,c:dragStart.c};
+    if(dist>18){
+      let t=Math.abs(dx)>Math.abs(dy)?{r:from.r,c:from.c+(dx>0?1:-1)}:{r:from.r+(dy>0?1:-1),c:from.c};
+      if(t.r>=0&&t.r<ROWS&&t.c>=0&&t.c<COLS){ selected=null; trySwap(from,t); }
+      else { scheduleIdleHint(); }
+    } else {
+      if(!selected){ selected=from; render(); }
+      else if(selected.r===from.r&&selected.c===from.c){ selected=null; render(); }
+      else if(isAdjacent(selected,from)){ const a=selected,b=from; selected=null; trySwap(a,b); }
+      else { selected=from; render(); }
+      scheduleIdleHint();
+    }
+    dragStart=null;
+  });
+}
+
+function renderLegend(){
+  legendEl.innerHTML='';
+  MATS.forEach(m=>{
+    const info=MATERIALS[m];
+    const lg=document.createElement('div');
+    lg.className='lg '+m;
+    lg.innerHTML='<span class="sw">'+info.icons[0]+'</span>'+info.name;
+    legendEl.appendChild(lg);
+  });
+}
+
+function applyMode(modeKey){
+  currentMode=modeKey;
+  CFG=MODES[modeKey];
+  MATERIALS=CFG.materials;
+  MATS=Object.keys(MATERIALS);
+  ROWS=CFG.rows; COLS=CFG.cols; totalTime=CFG.time;
+  document.documentElement.style.setProperty('--tsize', CFG.tile+'px');
+  boardEl.style.gridTemplateColumns=`repeat(${COLS}, ${CFG.tile}px)`;
+  boardEl.style.gridTemplateRows=`repeat(${ROWS}, ${CFG.tile}px)`;
+  modePill.textContent=CFG.label;
+  footHint.innerHTML=CFG.hint;
+  renderLegend();
+}
+
+function startGame(){
+  score=0; bestCombo=0; timeLeft=totalTime; selected=null; busy=false;
+  scoreNum.textContent='0'; comboNum.textContent='0';
+  grid=makeBoardNoMatches(); render();
+  endOverlay.classList.add('hidden');
+  playing=true; timerFill.style.width='100%';
+  clearInterval(timerId);
+  timerId=setInterval(()=>{ timeLeft-=0.2; if(timeLeft<=0){ timeLeft=0; endGame(); } timerFill.style.width=(timeLeft/totalTime*100)+'%'; },200);
+  scheduleIdleHint();
+}
+function endGame(){
+  playing=false; clearInterval(timerId); clearIdleTimer();
+  $('finalScore').textContent=score;
+  const goal = currentMode==='advanced' ? [3000,1500] : [2500,1200];
+  let msg='잘했어요! 다음엔 더 잘할 수 있어요.';
+  if(score>=goal[0]) msg='재료 매치의 달인이에요! 🏆';
+  else if(score>=goal[1]) msg='훌륭해요! 손이 빠르네요.';
+  $('finalMsg').textContent=msg;
+  endOverlay.classList.remove('hidden');
+}
+
+function enterMode(modeKey){
+  applyMode(modeKey);
+  modeOverlay.classList.add('hidden');
+  gameWrap.style.display='block';
+  startGame();
+}
+function backToModes(){
+  playing=false; clearInterval(timerId); clearIdleTimer();
+  endOverlay.classList.add('hidden');
+  gameWrap.style.display='none';
+  modeOverlay.classList.remove('hidden');
+}
+
+$('pickBeginner').addEventListener('click', ()=>enterMode('beginner'));
+$('pickAdvanced').addEventListener('click', ()=>enterMode('advanced'));
+$('restartBtn').addEventListener('click', startGame);
+$('changeModeBtn').addEventListener('click', backToModes);
+</script>
+</body>
+</html>
