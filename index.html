@@ -141,9 +141,10 @@ main {
 /* ── 3×3 그리드 ── */
 .game-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 18px;
 }
+@media (max-width: 900px) { .game-grid { grid-template-columns: repeat(3,1fr); gap: 14px; } }
 @media (max-width: 680px) { .game-grid { grid-template-columns: repeat(2,1fr); gap: 12px; } }
 @media (max-width: 420px) { .game-grid { grid-template-columns: 1fr; } }
 
@@ -257,19 +258,6 @@ main {
 }
 .coming-card .plus { font-size: 26px; color: rgba(155,93,229,.3); }
 .coming-card p { font-size: 12px; color: rgba(139,128,176,.45); line-height: 1.6; }
-
-/* ── 팁 배너 ── */
-.tip-banner {
-  background: linear-gradient(145deg, #2a234f, var(--surface));
-  border: 1px solid rgba(0,245,212,.2);
-  border-radius: var(--radius);
-  padding: 17px 22px;
-  display: flex; gap: 14px; align-items: flex-start;
-  margin-top: 40px;
-}
-.tip-icon { font-size: 22px; flex-shrink: 0; }
-.tip-text { font-size: 13px; color: var(--muted); line-height: 1.75; }
-.tip-text strong { color: var(--cyan); }
 
 /* ── 푸터 ── */
 footer {
@@ -494,6 +482,9 @@ footer {
       </div>
     </div>
 
+    <div class="coming-card"><div class="plus">＋</div><p>새 게임 추가 예정 🛠️</p></div>
+    <div class="coming-card"><div class="plus">＋</div><p>새 게임 추가 예정 🛠️</p></div>
+    <div class="coming-card"><div class="plus">＋</div><p>새 게임 추가 예정 🛠️</p></div>
     <div class="coming-card"><div class="plus">＋</div><p>새 게임 추가 예정 🛠️</p></div>
 
   </div>
