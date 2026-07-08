@@ -1,0 +1,654 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>건설 연구소 봉쇄 탈출 — 건설 기술 복습</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gothic+A1:wght@400;500;700;900&family=Jua&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0d2740; --bg2:#091d31; --grid:rgba(130,190,220,.09);
+    --line:#5fb8d6; --line-dim:rgba(95,184,214,.35);
+    --ink:#eaf4f8; --muted:#93b0c1;
+    --paper:#f7f3e8; --paper-ink:#1d2c39; --paper-line:#d8cfb8;
+    --accent:#f6c945; --accent-ink:#3a2c00;
+    --orange:#ef7d3b; --good:#37b083; --bad:#e0574a;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Gothic A1','Noto Sans KR',system-ui,sans-serif;
+    color:var(--ink);
+    background:
+      linear-gradient(var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/28px 28px,
+      radial-gradient(1200px 700px at 50% -10%,#12395a 0,transparent 60%),
+      linear-gradient(160deg,var(--bg) 0%,var(--bg2) 100%);
+    background-attachment:fixed;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:20px 16px 64px}
+
+  /* ---- top status bar ---- */
+  .statusbar{
+    position:sticky;top:0;z-index:20;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    padding:12px 14px;margin:-20px -16px 22px;
+    background:linear-gradient(180deg,rgba(9,29,49,.98),rgba(9,29,49,.86));
+    border-bottom:1px solid var(--line-dim);
+    backdrop-filter:blur(4px);
+  }
+  .brand{font-family:'Black Han Sans',sans-serif;font-size:16px;letter-spacing:.5px;color:var(--accent)}
+  .brand .sub{color:var(--muted);font-family:'Gothic A1';font-weight:700;font-size:11px;display:block;letter-spacing:2px}
+  .locks{margin-left:auto;display:flex;gap:7px;align-items:center}
+  .locks .lbl{font-size:11px;color:var(--muted);letter-spacing:1px;margin-right:2px}
+  .slot{
+    width:34px;height:44px;border:2px solid var(--line-dim);border-radius:8px;
+    display:grid;place-items:center;font-family:'Black Han Sans';font-size:22px;
+    color:var(--muted);background:rgba(95,184,214,.06);transition:.35s;
+  }
+  .slot.filled{border-color:var(--accent);color:var(--accent-ink);background:var(--accent);
+    box-shadow:0 0 0 3px rgba(246,201,69,.2)}
+
+  /* ---- screens ---- */
+  .screen{display:none;animation:fade .4s ease}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .eyebrow{font-size:12px;letter-spacing:4px;color:var(--line);font-weight:700;margin:0 0 8px}
+  h1{font-family:'Black Han Sans',sans-serif;font-weight:400;line-height:1.15;
+     font-size:clamp(30px,7vw,52px);margin:0 0 14px;letter-spacing:-.5px}
+  h1 .hl{color:var(--accent)}
+  .lead{color:#cfe1ea;font-size:16px;line-height:1.75;max-width:60ch}
+  .lead b{color:#fff}
+
+  .plate{
+    border:1px solid var(--line-dim);border-radius:var(--r);
+    background:linear-gradient(180deg,rgba(95,184,214,.07),rgba(95,184,214,.02));
+    padding:20px;margin:20px 0;
+  }
+  .stamp{display:inline-flex;align-items:center;gap:8px;border:2px solid var(--orange);
+    color:var(--orange);font-weight:900;font-size:12px;letter-spacing:2px;
+    padding:5px 11px;border-radius:6px;transform:rotate(-2deg)}
+
+  /* buttons */
+  .btn{
+    appearance:none;border:none;cursor:pointer;font-family:'Gothic A1';font-weight:800;
+    font-size:16px;padding:14px 26px;border-radius:12px;letter-spacing:.5px;
+    background:var(--accent);color:var(--accent-ink);transition:transform .12s, box-shadow .2s;
+    box-shadow:0 4px 0 #c9a01f;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn:active{transform:translateY(2px);box-shadow:0 2px 0 #c9a01f}
+  .btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--line-dim);box-shadow:none}
+  .btn.ghost:hover{border-color:var(--line)}
+  .btn:focus-visible{outline:3px solid var(--line);outline-offset:3px}
+  .btnrow{display:flex;gap:12px;flex-wrap:wrap;margin-top:22px}
+
+  /* ---- room map ---- */
+  .maphead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .grid-rooms{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:16px}
+  .roomcard{
+    text-align:left;border:1px solid var(--line-dim);border-radius:var(--r);padding:18px;
+    background:linear-gradient(180deg,rgba(95,184,214,.08),rgba(95,184,214,.02));
+    cursor:pointer;transition:.18s;position:relative;overflow:hidden;color:var(--ink);
+    font-family:'Gothic A1';
+  }
+  .roomcard:hover{border-color:var(--line);transform:translateY(-2px)}
+  .roomcard .zone{font-family:'Black Han Sans';font-size:13px;color:var(--line);letter-spacing:1px}
+  .roomcard .rt{font-size:19px;font-weight:900;margin:6px 0 4px}
+  .roomcard .rd{font-size:13px;color:var(--muted);line-height:1.5}
+  .roomcard .tag{margin-top:12px;display:inline-block;font-size:11px;font-weight:800;letter-spacing:1px;
+    color:var(--orange);border:1px solid var(--orange);border-radius:20px;padding:3px 10px}
+  .roomcard.done{border-color:var(--good)}
+  .roomcard.done .check{position:absolute;top:12px;right:14px;color:var(--good);font-weight:900;font-size:22px}
+  .roomcard.done .tag{color:var(--good);border-color:var(--good)}
+
+  .vault-cta{margin-top:20px}
+
+  /* ---- room play surface (paper) ---- */
+  .paper{
+    background:var(--paper);color:var(--paper-ink);border-radius:var(--r);
+    padding:22px;box-shadow:0 18px 40px -18px rgba(0,0,0,.6);
+    background-image:linear-gradient(rgba(0,90,140,.045) 1px,transparent 1px),
+                     linear-gradient(90deg,rgba(0,90,140,.045) 1px,transparent 1px);
+    background-size:22px 22px;
+  }
+  .roomtitle{font-family:'Jua',sans-serif;font-size:24px;margin:2px 0 2px}
+  .roomsub{color:#5c6b76;font-size:14px;margin:0 0 4px}
+  .progress{height:8px;border-radius:20px;background:#e6ddc8;overflow:hidden;margin:14px 0 20px}
+  .progress > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--accent));transition:width .35s}
+
+  /* matching */
+  .match{display:grid;grid-template-columns:1fr 34px 1fr;gap:10px 8px;align-items:stretch}
+  .col-h{font-weight:900;font-size:12px;letter-spacing:1px;color:#7a8894;text-align:center;padding-bottom:2px}
+  .mcard{
+    border:2px solid var(--paper-line);border-radius:11px;padding:12px 13px;background:#fffdf6;
+    cursor:pointer;font-size:14px;line-height:1.45;transition:.14s;font-weight:600;color:#26333f;
+    display:flex;align-items:center;min-height:56px;
+  }
+  .mcard.right{justify-content:center;font-weight:900;font-family:'Jua';font-size:17px}
+  .mcard:hover{border-color:var(--orange)}
+  .mcard.sel{border-color:var(--orange);background:#fff3e2;box-shadow:0 0 0 3px rgba(239,125,59,.18)}
+  .mcard.matched{border-color:var(--good);background:#e9f7f0;color:#1c7a56;cursor:default;opacity:.85}
+  .mcard.matched:hover{border-color:var(--good)}
+  .mid{display:grid;place-items:center;color:#b9ac8d;font-weight:900}
+  .mid.on{color:var(--good)}
+  .shake{animation:shk .4s}
+  @keyframes shk{0%,100%{transform:none}20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
+
+  /* quiz */
+  .qbox{border:2px dashed var(--paper-line);border-radius:12px;padding:16px 18px;background:#fffdf6;margin-bottom:16px}
+  .qbox .qn{font-size:12px;font-weight:900;color:var(--orange);letter-spacing:1px}
+  .qbox .qt{font-size:16px;line-height:1.6;font-weight:700;margin-top:6px}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .opt{border:2px solid var(--paper-line);border-radius:11px;padding:14px;background:#fffdf6;cursor:pointer;
+    font-weight:900;font-family:'Jua';font-size:17px;color:#26333f;transition:.14s;text-align:center}
+  .opt:hover{border-color:var(--orange);background:#fff3e2}
+  .opt.wrong{border-color:var(--bad);background:#fbe7e4;color:var(--bad)}
+  .opt.right{border-color:var(--good);background:#e9f7f0;color:#1c7a56}
+
+  /* classify */
+  .pool{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;min-height:52px;margin-bottom:16px}
+  .chip{border:2px solid var(--paper-line);border-radius:22px;padding:9px 16px;background:#fffdf6;cursor:pointer;
+    font-weight:900;font-family:'Jua';font-size:16px;color:#26333f;transition:.14s}
+  .chip:hover{border-color:var(--orange);background:#fff3e2}
+  .chip.sel{border-color:var(--orange);background:#fff3e2;box-shadow:0 0 0 3px rgba(239,125,59,.18)}
+  .bins{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .bin{border:2px solid var(--paper-line);border-radius:12px;padding:12px 10px;min-height:120px;background:#fbf7ec;
+    cursor:pointer;transition:.14s}
+  .bin:hover{border-color:var(--orange)}
+  .bin h4{margin:0 0 8px;font-family:'Jua';font-size:16px;text-align:center;color:#3a4954}
+  .bin .drop{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+  .bin .placed{border:none;border-radius:18px;padding:6px 12px;background:#e9f7f0;color:#1c7a56;font-weight:900;
+    font-family:'Jua';font-size:14px}
+
+  .feedback{margin-top:14px;min-height:24px;font-weight:800;font-size:14px}
+  .feedback.ok{color:var(--good)}
+  .feedback.no{color:var(--bad)}
+
+  /* room solved reveal */
+  .solved{margin-top:20px;border-radius:12px;padding:18px;text-align:center;
+    background:linear-gradient(180deg,#123047,#0d2740);border:1px solid var(--accent)}
+  .solved .kbig{font-family:'Black Han Sans';font-size:56px;color:var(--accent);line-height:1}
+  .solved .kt{color:#cfe1ea;font-size:14px;margin:6px 0 2px}
+  .solved .kt b{color:#fff}
+
+  /* vault */
+  .vault{max-width:420px;margin:0 auto;text-align:center}
+  .dial{display:flex;gap:10px;justify-content:center;margin:22px 0}
+  .digit{width:60px;height:76px;border:2px solid var(--line-dim);border-radius:12px;background:rgba(95,184,214,.06);
+    font-family:'Black Han Sans';font-size:40px;text-align:center;color:var(--ink);}
+  .digit:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(246,201,69,.25)}
+
+  /* success */
+  .success h1{color:var(--accent)}
+  .summary{display:grid;gap:10px;margin-top:18px;text-align:left}
+  .srow{border:1px solid var(--line-dim);border-radius:12px;padding:14px 16px;
+    background:linear-gradient(180deg,rgba(95,184,214,.08),rgba(95,184,214,.02))}
+  .srow .st{font-weight:900;color:var(--accent);font-size:14px}
+  .srow .sd{color:#cfe1ea;font-size:14px;margin-top:4px;line-height:1.55}
+
+  .foot{margin-top:26px;color:var(--muted);font-size:12px;text-align:center;letter-spacing:.3px}
+
+  /* ---- fun / emoji flourishes ---- */
+  .mascot{font-size:46px;margin-bottom:2px;display:inline-block;animation:bob 2.6s ease-in-out infinite;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-9px) rotate(3deg)}}
+  .remoji{font-size:34px;line-height:1;margin-bottom:6px;transition:transform .18s}
+  .roomcard:hover .remoji{transform:scale(1.18) rotate(-6deg)}
+  .roomcard.done .remoji{filter:none}
+  .rt-emoji{display:inline-block;animation:wiggle 3s ease-in-out infinite}
+  @keyframes wiggle{0%,92%,100%{transform:rotate(0)}94%{transform:rotate(-12deg)}97%{transform:rotate(12deg)}}
+  .pop{font-family:'Jua';font-size:20px;color:var(--accent);letter-spacing:1px;animation:pop .5s ease}
+  @keyframes pop{0%{transform:scale(.5);opacity:0}60%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+  .kwrap{display:flex;align-items:center;justify-content:center;gap:12px;margin:2px 0}
+  .kside{font-size:26px;animation:spinkey 1.4s ease-in-out infinite}
+  @keyframes spinkey{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+  .kbig{animation:kpop .55s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes kpop{0%{transform:scale(0)}100%{transform:scale(1)}}
+  .confetti-layer{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+  .confetti{position:absolute;top:-24px;display:inline-block;will-change:transform,opacity;
+    animation-name:fall;animation-timing-function:linear;animation-fill-mode:forwards}
+  @keyframes fall{0%{transform:translate(0,0) rotate(0);opacity:1}
+    100%{transform:translate(var(--x),108vh) rotate(var(--rot));opacity:.9}}
+
+  @media (max-width:640px){
+    .grid-rooms{grid-template-columns:1fr}
+    .opts{grid-template-columns:1fr}
+    .bins{grid-template-columns:1fr}
+    .match{grid-template-columns:1fr}
+    .match .col-h.mid-h,.mid{display:none}
+    .slot{width:30px;height:40px;font-size:19px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="statusbar">
+    <div class="brand">건설 연구소 봉쇄<span class="sub">CONSTRUCTION LOCKDOWN</span></div>
+    <div class="locks">
+      <span class="lbl">금고 코드</span>
+      <div class="slot" id="s0">▢</div>
+      <div class="slot" id="s1">▢</div>
+      <div class="slot" id="s2">▢</div>
+      <div class="slot" id="s3">▢</div>
+    </div>
+  </div>
+
+  <!-- START -->
+  <section class="screen active" id="scr-start">
+    <p class="eyebrow">교과서 127–129쪽 · 건설 기술의 발달과 건설 구조물</p>
+    <div class="mascot">👷‍♂️🔒</div>
+    <h1>건설 연구소에<br><span class="hl">봉쇄</span>되었다.</h1>
+    <p class="lead">문이 잠겼습니다. 탈출하려면 <b>4개의 구역</b>을 통과해 금고 코드 <b>네 자리</b>를 모아야 합니다.
+      각 구역의 문제는 모두 교과서 <b>건설 기술의 개념·특성</b>과 <b>건설 구조물의 종류</b>에서 나옵니다.
+      구역을 풀 때마다 코드 숫자가 하나씩 열립니다. 상단의 금고 표시를 지켜보세요.</p>
+    <div class="btnrow">
+      <button class="btn" onclick="go('map')">🔓 봉쇄 해제 시작</button>
+    </div>
+    <div class="plate">
+      <span class="stamp">▲ 조사 지침</span>
+      <p class="lead" style="margin-top:12px">건설 기술은 목적에 따라 <b>건축 기술</b>(집·학교·백화점 등 생활 공간)과
+      <b>토목 기술</b>(도로·교량·댐 등 자연환경 개선)로 나뉩니다. 이 점을 기억하면 첫 구역이 쉬워집니다.</p>
+    </div>
+  </section>
+
+  <!-- MAP -->
+  <section class="screen" id="scr-map">
+    <div class="maphead">
+      <div>
+        <p class="eyebrow">구역 선택</p>
+        <h1 style="font-size:clamp(26px,6vw,40px)">어느 <span class="hl">문</span>부터 열까?</h1>
+      </div>
+    </div>
+    <p class="lead">순서는 자유입니다. 네 구역을 모두 통과하면 <b>최종 금고</b>가 열립니다.</p>
+    <div class="grid-rooms" id="roomGrid"></div>
+    <div class="vault-cta">
+      <button class="btn" id="vaultBtn" onclick="tryVault()">🔐 최종 금고로 이동 →</button>
+    </div>
+  </section>
+
+  <!-- ROOM (dynamic) -->
+  <section class="screen" id="scr-room">
+    <div class="btnrow" style="margin:0 0 14px">
+      <button class="btn ghost" onclick="go('map')">← 구역 선택으로</button>
+    </div>
+    <div class="paper" id="roomBody"></div>
+  </section>
+
+  <!-- VAULT -->
+  <section class="screen" id="scr-vault">
+    <div class="vault">
+      <p class="eyebrow">최종 금고</p>
+      <h1 style="font-size:clamp(26px,6vw,40px)">코드를 <span class="hl">입력</span>하라</h1>
+      <p class="lead" style="margin:0 auto">네 구역에서 찾은 숫자를 순서대로 입력하세요.</p>
+      <div class="dial">
+        <input class="digit" id="d0" maxlength="1" inputmode="numeric" aria-label="첫째 자리">
+        <input class="digit" id="d1" maxlength="1" inputmode="numeric" aria-label="둘째 자리">
+        <input class="digit" id="d2" maxlength="1" inputmode="numeric" aria-label="셋째 자리">
+        <input class="digit" id="d3" maxlength="1" inputmode="numeric" aria-label="넷째 자리">
+      </div>
+      <div class="feedback" id="vaultMsg" style="text-align:center"></div>
+      <div class="btnrow" style="justify-content:center">
+        <button class="btn" onclick="checkVault()">🔓 금고 열기</button>
+        <button class="btn ghost" onclick="go('map')">← 구역으로</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SUCCESS -->
+  <section class="screen success" id="scr-win">
+    <p class="eyebrow">탈출 성공 · MISSION CLEAR</p>
+    <h1>문이 <span class="hl">열렸다!</span> 🔓</h1>
+    <p class="lead">건설 기술의 개념과 건설 구조물의 종류를 모두 통과했습니다. 오늘의 핵심을 다시 정리해 볼까요?</p>
+    <div class="summary" id="summary"></div>
+    <div class="btnrow">
+      <button class="btn" onclick="resetAll()">🔄 다시 도전</button>
+    </div>
+  </section>
+
+  <p class="foot">건설 기술 내용 정리 · 방탈출형 복습 게임 · 교과서 Ⅳ단원 127–129쪽</p>
+</div>
+
+<script>
+/* ============ DATA ============ */
+const ROOMS = [
+  {
+    zone:"제1구역", title:"특성의 방", sub:"건설 기술의 6가지 특성 (127쪽)", emoji:"🏗️",
+    tag:"짝 맞추기", type:"match", key:6,
+    keyText:"건설 기술의 특성은 모두 <b>6가지</b> — 지역성·경제성·공공성·일회성·장기성·종합성.",
+    intro:"인천국제공항 사례를 알맞은 특성과 연결하세요.",
+    pairs:[
+      ["인천 앞바다의 섬들 사이를 메우고 그 위에 세운 공항이다.","지역성"],
+      ["1단계 공사에만 연 1,380만 명의 인력과 253만 대의 장비가 투입되었다.","경제성"],
+      ["매년 수천만 명이 이용하는 공공시설이다.","공공성"],
+      ["세계 어디에도 동일한 구조물이 존재하지 않는다.","일회성"],
+      ["23년 동안 건설되었으며 지금도 확장 공사가 진행 중이다.","장기성"],
+      ["여러 나라의 수많은 공학자가 협업하여 설계하였다.","종합성"]
+    ]
+  },
+  {
+    zone:"제2구역", title:"토목의 방", sub:"토목 구조물 7종 (128쪽)", emoji:"🚧",
+    tag:"짝 맞추기", type:"match", key:7,
+    keyText:"토목 구조물은 <b>7종류</b> — 터널·도로·발전 시설·댐·교량·상하수도·항만. 대부분 <b>사회 기반 시설</b>입니다.",
+    intro:"설명을 읽고 알맞은 토목 구조물과 연결하세요.",
+    pairs:[
+      ["땅속·산·바다 아래를 뚫어 사람이나 차량이 이동하게 한 구조물","터널"],
+      ["아스팔트·콘크리트로 포장해 사람·차량이 다니게 한 길","도로"],
+      ["수력·화력·풍력·원자력 등으로 전기 에너지를 생산하는 시설","발전 시설"],
+      ["계곡·하천을 가로질러 물을 저장하거나 수위를 조절하는 구조물","댐"],
+      ["강·바다·계곡을 가로질러 사람·차량이 건너게 만든 구조물","교량"],
+      ["물을 깨끗이 정수해 공급하고 사용한 물을 처리해 내보내는 시설","상하수도"],
+      ["배가 정박하고 사람·화물을 싣거나 내리게 하는 시설","항만"]
+    ]
+  },
+  {
+    zone:"제3구역", title:"교량의 방", sub:"다양한 교량의 형식 6종 (128쪽)", emoji:"🌉",
+    tag:"형식 퀴즈", type:"quiz", key:6,
+    keyText:"교량의 형식은 <b>6가지</b> — 단순교·라멘교·트러스교·아치교·현수교·사장교.",
+    intro:"설명에 알맞은 교량 형식을 고르세요.",
+    quiz:[
+      {q:"쐐기 모양의 돌을 반원 형태로 쌓아 올린 아치 구조로 하중을 지지한다.",a:"아치교",opt:["아치교","단순교","현수교","라멘교"]},
+      {q:"양쪽 주탑 사이에 늘어뜨린 주 케이블에 상판을 매달아 지지한다. (예: 금문교)",a:"현수교",opt:["트러스교","현수교","사장교","아치교"]},
+      {q:"주탑에서 뻗어 나온 케이블이 상판을 비스듬히 직접 잡아 준다. (예: 인천대교)",a:"사장교",opt:["현수교","라멘교","사장교","단순교"]},
+      {q:"삼각형 모양의 뼈대를 얽어 짜서 하중을 지지하는 교량이다.",a:"트러스교",opt:["트러스교","아치교","사장교","단순교"]},
+      {q:"상판과 다리 기둥(교각)을 하나로 단단히 연결한 구조의 교량이다.",a:"라멘교",opt:["단순교","라멘교","현수교","트러스교"]},
+      {q:"양쪽 교각 위에 상판을 단순하게 걸쳐 놓은 가장 기본적인 교량이다.",a:"단순교",opt:["라멘교","아치교","단순교","사장교"]}
+    ]
+  },
+  {
+    zone:"제4구역", title:"건축의 방", sub:"건축 구조물의 용도별 분류 (129쪽)", emoji:"🏢",
+    tag:"분류 게임", type:"classify", key:3,
+    keyText:"건축 구조물은 용도에 따라 <b>3가지</b> — 주거용·상업용·공공용.",
+    intro:"건축물을 알맞은 용도 상자에 분류하세요. (카드를 누른 뒤 상자를 누르세요)",
+    bins:["주거용","상업용","공공용"],
+    cards:[
+      ["아파트","주거용"],["단독 주택","주거용"],["연립 주택","주거용"],
+      ["백화점","상업용"],["호텔","상업용"],["병원","상업용"],
+      ["학교","공공용"],["도서관","공공용"],["박물관","공공용"]
+    ]
+  }
+];
+const FINAL_CODE = ROOMS.map(r=>r.key).join(""); // "6763"
+
+/* ============ STATE ============ */
+const state = { solved:[false,false,false,false] };
+
+/* ============ HELPERS ============ */
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function go(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('scr-'+name).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function updateLocks(){
+  for(let i=0;i<4;i++){
+    const el=document.getElementById('s'+i);
+    if(state.solved[i]){el.textContent=ROOMS[i].key;el.classList.add('filled')}
+    else{el.textContent='▢';el.classList.remove('filled')}
+  }
+}
+function markSolved(i){ if(!state.solved[i]){state.solved[i]=true;updateLocks();renderMap();} }
+
+/* ============ MAP ============ */
+function renderMap(){
+  const g=document.getElementById('roomGrid'); g.innerHTML='';
+  ROOMS.forEach((r,i)=>{
+    const d=document.createElement('button');
+    d.className='roomcard'+(state.solved[i]?' done':'');
+    d.onclick=()=>openRoom(i);
+    d.innerHTML=`${state.solved[i]?'<span class="check">✔</span>':''}
+      <div class="remoji">${r.emoji}</div>
+      <div class="zone">${r.zone}</div>
+      <div class="rt">${r.title}</div>
+      <div class="rd">${r.sub}</div>
+      <span class="tag">${state.solved[i]?'🔑 통과 · 코드 '+r.key:'▶ '+r.tag}</span>`;
+    g.appendChild(d);
+  });
+}
+
+/* ============ ROOM ROUTER ============ */
+function openRoom(i){
+  const r=ROOMS[i];
+  const body=document.getElementById('roomBody');
+  body.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <div>
+        <div class="zone" style="font-family:'Black Han Sans';color:#0d6a92;font-size:13px;letter-spacing:1px">${r.zone}</div>
+        <div class="roomtitle"><span class="rt-emoji">${r.emoji}</span> ${r.title}</div>
+        <p class="roomsub">${r.intro}</p>
+      </div>
+    </div>
+    <div class="progress"><i id="prog"></i></div>
+    <div id="play"></div>
+    <div class="feedback" id="fb"></div>
+    <div id="reveal"></div>`;
+  go('room');
+  if(r.type==='match') playMatch(i);
+  else if(r.type==='quiz') playQuiz(i);
+  else if(r.type==='classify') playClassify(i);
+  if(state.solved[i]) showReveal(i); // already solved -> show key again
+}
+
+function setProg(p){document.getElementById('prog').style.width=(p*100)+'%'}
+function fb(msg,ok){const f=document.getElementById('fb');f.textContent=msg;f.className='feedback '+(ok?'ok':'no')}
+
+function showReveal(i){
+  const r=ROOMS[i];
+  const already=state.solved[i];
+  document.getElementById('reveal').innerHTML=`
+    <div class="solved">
+      <div class="pop">🎉 통과! 🎉</div>
+      <div class="kwrap"><span class="kside">🔑</span><span class="kbig">${r.key}</span><span class="kside">🔑</span></div>
+      <p class="kt">이 구역의 코드 숫자를 획득!</p>
+      <p class="kt">${r.keyText}</p>
+      <div class="btnrow" style="justify-content:center">
+        <button class="btn" onclick="go('map')">🗺️ 구역 선택으로 →</button>
+      </div>
+    </div>`;
+  if(!already) burstConfetti();
+  markSolved(i);
+}
+
+/* ============ CONFETTI ============ */
+function burstConfetti(big){
+  const pieces=big?90:44;
+  const emos=['🎉','🎊','⭐','🟡','🔧','🚀','✨','🟠'];
+  const layer=document.createElement('div'); layer.className='confetti-layer';
+  document.body.appendChild(layer);
+  for(let k=0;k<pieces;k++){
+    const s=document.createElement('span'); s.className='confetti';
+    const useEmoji=Math.random()<.5;
+    if(useEmoji){s.textContent=emos[Math.random()*emos.length|0];s.style.fontSize=(16+Math.random()*16)+'px';}
+    else{const c=['#f6c945','#ef7d3b','#5fb8d6','#37b083','#e0574a'][Math.random()*5|0];
+      s.style.background=c;s.style.width=s.style.height=(7+Math.random()*7)+'px';s.style.borderRadius=Math.random()<.5?'50%':'2px';}
+    s.style.left=Math.random()*100+'vw';
+    s.style.animationDuration=(2.2+Math.random()*1.8)+'s';
+    s.style.animationDelay=(Math.random()*.4)+'s';
+    s.style.setProperty('--x',(Math.random()*160-80)+'px');
+    s.style.setProperty('--rot',(Math.random()*720-360)+'deg');
+    layer.appendChild(s);
+  }
+  setTimeout(()=>layer.remove(),4600);
+}
+
+/* ============ MATCH ============ */
+function playMatch(i){
+  const r=ROOMS[i];
+  const play=document.getElementById('play');
+  const lefts=r.pairs.map((p,idx)=>({t:p[0],id:idx}));
+  const rights=shuffle(r.pairs.map((p,idx)=>({t:p[1],id:idx})));
+  let sel=null, done=0;
+  const total=r.pairs.length;
+  play.innerHTML=`<div class="match" id="mgrid">
+    <div class="col-h">설명 / 사례</div><div class="col-h mid-h"></div><div class="col-h">정답</div>
+  </div>`;
+  const grid=document.getElementById('mgrid');
+  const rows=Math.max(lefts.length,rights.length);
+  for(let k=0;k<rows;k++){
+    const L=lefts[k], R=rights[k];
+    const lc=document.createElement('div');
+    lc.className='mcard';lc.dataset.side='L';lc.dataset.id=L.id;lc.textContent=L.t;
+    const mid=document.createElement('div');mid.className='mid';mid.dataset.mid=L.id;mid.textContent='→';
+    const rc=document.createElement('div');
+    rc.className='mcard right';rc.dataset.side='R';rc.dataset.id=R.id;rc.textContent=R.t;
+    grid.appendChild(lc);grid.appendChild(mid);grid.appendChild(rc);
+  }
+
+  function clearSel(){document.querySelectorAll('#mgrid .mcard.sel').forEach(e=>e.classList.remove('sel'));sel=null}
+  grid.querySelectorAll('.mcard').forEach(card=>{
+    card.addEventListener('click',()=>{
+      if(card.classList.contains('matched'))return;
+      if(!sel){ sel=card; card.classList.add('sel'); return; }
+      if(sel===card){ clearSel(); return; }
+      if(sel.dataset.side===card.dataset.side){ // same column, switch selection
+        clearSel(); sel=card; card.classList.add('sel'); return;
+      }
+      // one L + one R
+      if(sel.dataset.id===card.dataset.id){
+        sel.classList.remove('sel');
+        sel.classList.add('matched'); card.classList.add('matched');
+        const m=grid.querySelector(`.mid[data-mid="${card.dataset.id}"]`); if(m)m.classList.add('on');
+        sel=null; done++;
+        setProg(done/total);
+        if(done===total){ fb('🎉 모든 짝을 맞췄습니다!',true); showReveal(i); }
+        else fb('✅ 맞았어요! 계속 연결하세요.',true);
+      }else{
+        const a=sel,b=card; a.classList.add('shake');b.classList.add('shake');
+        setTimeout(()=>{a.classList.remove('shake');b.classList.remove('shake')},420);
+        clearSel(); fb('❌ 앗! 다시 살펴보세요.',false);
+      }
+    });
+  });
+  setProg(0);
+}
+
+/* ============ QUIZ ============ */
+function playQuiz(i){
+  const r=ROOMS[i];
+  const play=document.getElementById('play');
+  const qs=shuffle(r.quiz);
+  let idx=0;
+  function render(){
+    if(idx>=qs.length){ fb('🎉 모든 문제를 맞혔습니다!',true); showReveal(i); return; }
+    const item=qs[idx];
+    const opts=shuffle(item.opt);
+    setProg(idx/qs.length);
+    play.innerHTML=`<div class="qbox">
+        <div class="qn">문제 ${idx+1} / ${qs.length}</div>
+        <div class="qt">${item.q}</div>
+      </div>
+      <div class="opts">${opts.map(o=>`<button class="opt" data-o="${o}">${o}</button>`).join('')}</div>`;
+    play.querySelectorAll('.opt').forEach(b=>{
+      b.addEventListener('click',()=>{
+        if(b.dataset.o===item.a){
+          b.classList.add('right'); fb('✅ 정답!',true);
+          setTimeout(()=>{idx++;render();},450);
+        }else{
+          b.classList.add('wrong'); b.classList.add('shake');
+          const right=play.querySelector(`.opt[data-o="${item.a}"]`);
+          fb('❌ 아쉬워요. 다시 생각해 보세요.',false);
+          setTimeout(()=>{b.classList.remove('wrong','shake')},480);
+        }
+      });
+    });
+  }
+  render();
+}
+
+/* ============ CLASSIFY ============ */
+function playClassify(i){
+  const r=ROOMS[i];
+  const play=document.getElementById('play');
+  const cards=shuffle(r.cards.map((c,idx)=>({t:c[0],cat:c[1],id:idx})));
+  let sel=null, placed=0; const total=cards.length;
+  play.innerHTML=`
+    <div class="pool" id="pool">${cards.map(c=>`<button class="chip" data-id="${c.id}" data-cat="${c.cat}">${c.t}</button>`).join('')}</div>
+    <div class="bins">${r.bins.map(b=>`
+      <div class="bin" data-bin="${b}"><h4>${b}</h4><div class="drop"></div></div>`).join('')}</div>`;
+  function clearSel(){document.querySelectorAll('#pool .chip.sel').forEach(e=>e.classList.remove('sel'));sel=null}
+  play.querySelectorAll('.chip').forEach(ch=>{
+    ch.addEventListener('click',()=>{
+      if(sel===ch){clearSel();return;}
+      clearSel(); sel=ch; ch.classList.add('sel');
+    });
+  });
+  play.querySelectorAll('.bin').forEach(bin=>{
+    bin.addEventListener('click',()=>{
+      if(!sel){fb('👆 먼저 건축물 카드를 선택하세요.',false);return;}
+      if(sel.dataset.cat===bin.dataset.bin){
+        const drop=bin.querySelector('.drop');
+        const p=document.createElement('span');p.className='placed';p.textContent=sel.textContent;
+        drop.appendChild(p); sel.remove(); sel=null; placed++;
+        setProg(placed/total);
+        if(placed===total){fb('🎉 모두 올바르게 분류했습니다!',true);showReveal(i);}
+        else fb('✅ 잘했어요! 계속 분류하세요.',true);
+      }else{
+        sel.classList.add('shake'); const s=sel;
+        setTimeout(()=>s.classList.remove('shake'),420);
+        fb('❌ 용도를 다시 확인해 보세요.',false); clearSel();
+      }
+    });
+  });
+  setProg(0);
+}
+
+/* ============ VAULT ============ */
+function tryVault(){
+  go('vault');
+  document.getElementById('vaultMsg').textContent='';
+  ['d0','d1','d2','d3'].forEach(id=>document.getElementById(id).value='');
+  // auto-advance typing
+  const ds=['d0','d1','d2','d3'].map(id=>document.getElementById(id));
+  ds.forEach((el,k)=>{
+    el.oninput=()=>{ el.value=el.value.replace(/[^0-9]/g,'').slice(0,1); if(el.value&&k<3)ds[k+1].focus(); };
+  });
+  document.getElementById('d0').focus();
+}
+function checkVault(){
+  const code=['d0','d1','d2','d3'].map(id=>document.getElementById(id).value).join('');
+  const msg=document.getElementById('vaultMsg');
+  if(code===FINAL_CODE){
+    msg.className='feedback ok'; msg.textContent='🎉 코드 일치! 문이 열립니다…';
+    setTimeout(showWin,600);
+  }else{
+    msg.className='feedback no';
+    const allSolved=state.solved.every(Boolean);
+    msg.textContent=allSolved?'코드가 맞지 않습니다. 각 구역의 숫자를 순서대로 확인하세요.'
+      :'아직 열지 않은 구역이 있어요. 모든 구역을 통과해야 코드를 알 수 있습니다.';
+    document.querySelector('.dial').classList.add('shake');
+    setTimeout(()=>document.querySelector('.dial').classList.remove('shake'),450);
+  }
+}
+
+/* ============ WIN ============ */
+function showWin(){
+  const s=document.getElementById('summary');
+  const notes=[
+    ["🧭 건축 기술 vs 토목 기술","건축은 집·학교·백화점 등 생활 공간을, 토목은 도로·교량·댐 등으로 자연환경을 개선하는 기술."],
+    ["🏗️ 건설 기술의 6가지 특성","지역성·경제성·공공성·일회성·장기성·종합성. 규모가 크고 자연환경을 바꾼다."],
+    ["🚧 토목 구조물 7종","터널·도로·발전 시설·댐·교량·상하수도·항만 — 대부분 사회 기반 시설."],
+    ["🌉 교량 형식 6종","단순교·라멘교·트러스교·아치교·현수교·사장교."],
+    ["🏢 건축 구조물 3분류","용도에 따라 주거용·상업용·공공용."]
+  ];
+  s.innerHTML=notes.map(n=>`<div class="srow"><div class="st">${n[0]}</div><div class="sd">${n[1]}</div></div>`).join('');
+  go('win');
+  burstConfetti(true);
+  setTimeout(()=>burstConfetti(true),700);
+}
+
+/* ============ RESET ============ */
+function resetAll(){ state.solved=[false,false,false,false]; updateLocks(); renderMap(); go('start'); }
+
+/* init */
+renderMap(); updateLocks();
+</script>
+</body>
+</html>
